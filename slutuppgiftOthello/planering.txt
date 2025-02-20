@@ -1,0 +1,33 @@
+OTHELLO PLANERING
+
+  1 2 3 4 5 6 7 8
+1 * * * * * * * *
+2 * * * * * * * *
+3 * * * * * * * *
+4 * * * V S * * *
+5 * * * S V * * *
+6 * * * * * * * *
+7 * * * * * * * *
+8 * * * * * * * *
+
+Svart börjar
+
+1. STRUC Lagra brädets positioner samt poäng
+2. FUNKTION sök möjliga drag för vit eller svart
+   - returnera lista över drag (eventuellt tom)
+3. FUNKTION lägg till bricka till brädet
+   - flippa påverkade brickor
+   - returnera true/false om giltigt drag
+4. clFUNKTION skriv ut brädet
+5. clFUNKTION ta input på var spelaren vill lägga
+6. clFUNKTION initialisera menyn, kör mot dator (välj svårighetsgrad) eller vän
+7. clFUNKTION skriv út vinstmeddelande
+8. FUNKTION räkna ut datorns drag
+   - parameter är lista över drag samt svårighetsgrad
+   - returnera drag
+
+main{
+	bräde = initBräde()
+	inställningar = initMenu()
+
+}
