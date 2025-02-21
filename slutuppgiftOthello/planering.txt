@@ -12,22 +12,61 @@ OTHELLO PLANERING
 
 Svart börjar
 
-1. STRUC Lagra brädets positioner samt poäng
-2. FUNKTION sök möjliga drag för vit eller svart
+-1. STRUCT inställningar
+0. STRUCT koordinat
+1. STRUCT Lagra brädets positioner , poäng och vems tur det är
+2. FUNKTION sök möjliga drag
+   - parameter bräde[1]
    - returnera lista över drag (eventuellt tom)
 3. FUNKTION lägg till bricka till brädet
+   - parameter bräde[1], koordinat
    - flippa påverkade brickor
    - returnera true/false om giltigt drag
 4. clFUNKTION skriv ut brädet
+   - parameter bräde[1] och overlay av möjliga drag
 5. clFUNKTION ta input på var spelaren vill lägga
-6. clFUNKTION initialisera menyn, kör mot dator (välj svårighetsgrad) eller vän
-7. clFUNKTION skriv út vinstmeddelande
-8. FUNKTION räkna ut datorns drag
-   - parameter är lista över drag samt svårighetsgrad
+   - parameter vemstur
    - returnera drag
+6. clFUNKTION initialisera menyn, kör mot dator (välj svårighetsgrad) eller vän
+   - returnera inställningar[-1]
+7. clFUNKTION skriv út vinstmeddelande
+   - parameter är bräde[1]
+   - returnera huruvida spelaren vill köra igen
+8. FUNKTION räkna ut datorns drag
+   - parameter är bräde[1], lista över drag samt svårighetsgrad
+   - returnera drag
+9. gameFUNKTION görspelardrag
+   - parameter är bräde[1]
+   - skriver ut "din tur vart vill du lägga"
+   - visar möjliga drag [4]
+   - tar input [5]
+   - lägger till bricka [3]
+   - returnera bool huruvida det gick
+10. gameFUNKTION gördatordrag
+   - parameter är bräde[1]
+   - räkna ut drag [8]
+   - lägg bricka [3]
+   - returnera bool huruvida det gick
 
 main{
-	bräde = initBräde()
-	inställningar = initMenu()
+	do:
+	bräde = initBräde() [1]
+	inställningar = initMenu() [6]
+	
+	gameloop:
+		//spelare svart gör drag
+		bool svartspeladedrag = körmotdator && datorbörjar ?
+			gördatordrag()[10] : görspelardrag(9);
+		if svartspeladedrag: skriv ut bräde[4]
 
+		//spelare vit gör drag
+		bool vitspeladedrag = körmotdator && !datorbörjar ?
+			gördatordrag()[10] : görspelardrag(9);
+		if vitspeladedrag: skriv ut bräde[4]
+
+		//avsluta om ingen kunde göra ett drag
+		if !(svartspeladedrag || vitspeladedrag):
+			skriv ut vinstmeddelande[7]
+	
+	while villköraigen;
 }
