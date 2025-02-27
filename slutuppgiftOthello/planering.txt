@@ -1,14 +1,16 @@
 OTHELLO PLANERING
 
-  0 1 2 3 4 5 6 7
-0 * * * * * * * *
-1 * * * * * * * *
-2 * * * * * * * *
-3 * * * V S * * *
-4 * * * S V * * *
-5 * * * * * * * *
+  a b c d e f g h
+1 * * * * * * * *  2 - Svart
+2 * * * * * * * *  2 - Vit (AI)
+3 * * * * * * * *
+4 * * * V S * * *  *Svarts tur*
+5 * * * S V * * *
 6 * * * * * * * *
 7 * * * * * * * *
+8 * * * * * * * *
+Skriv "bokstav siffra" där du vill lägga:
+
 
 Svart börjar
 
@@ -23,10 +25,9 @@ Svart börjar
    - flippa påverkade brickor
    - returnera true/false om giltigt drag
 4. clFUNKTION skriv ut brädet
-   - parameter bräde[1] och overlay av möjliga drag
+   - parameter bräde[1] , inställningar och overlay av möjliga drag
 5. clFUNKTION ta input på var spelaren vill lägga
-   - parameter vemstur
-   - returnera drag
+   - returnera drag (koordinater) [0]
 6. clFUNKTION initialisera menyn, kör mot dator (välj svårighetsgrad) eller vän
    - returnera inställningar[-1]
 7. clFUNKTION skriv út vinstmeddelande
