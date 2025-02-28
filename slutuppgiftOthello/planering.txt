@@ -10,6 +10,7 @@ OTHELLO PLANERING
 7 * * * * * * * *
 8 * * * * * * * *
 Skriv "bokstav siffra" där du vill lägga:
+ffd 3sdf
 
 
 Svart börjar

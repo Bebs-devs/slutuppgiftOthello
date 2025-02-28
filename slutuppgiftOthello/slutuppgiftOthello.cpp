@@ -98,27 +98,50 @@ void displayBoard(Board& board, GameSettings &settings ,std::vector<GameCoordina
 }
 
 GameCoordinate getPlayerInput() {
-	bool invalidInput;
-	char letterIn;
-	int numberIn, x,y;
+	bool invalidInput; //är inputen "trasig"?
+	std::string inputLine; //spara rå input
+
+	//del av inputen som är bokstaven respektive siffran
+	char letterIn = 0, numberIn = 0; 
+
+	int x,y; //de bearbetade koordinaterna
+
+	//prompta användaren
 	std::cout << "Skriv \"bokstav siffra\" där du vill lägga:\n";
-	do {
-		std::cin >> letterIn >> numberIn;
-		letterIn = tolower(letterIn);
-		x = letterIn - 97; //'a' är 97
-		y = numberIn - 1; //koden räknar från 0
-		if (x < 0 || x > 7 || y < 0 || y > 7) {
-			invalidInput = true;
-			std::cin.clear();
-			std::cin.ignore(INT_MAX, '\n');
-			std::cout << "\033[F\033[F";
-			std::cout << "Var god mata in giltiga värden.            \n     \n\033[F";
+
+	do { //vi ska kolla input minst en gång men fler ifall ogiltig input ges
+
+		letterIn = 0; //måste nollställas för att kunna ta bearbeta input
+		invalidInput = false; //innan vi har input får vi anta att den är giltig
+
+		std::getline(std::cin, inputLine); //erhåll input i dess råaste form
+		for (char c : inputLine) { //iterera alla chars i inputen
+			if (isspace(c)) continue; //skippa mellanrum
+
+			//om vi inte redan har en bokstav och detta är en bokstav
+			if (letterIn == 0 && isalpha(c)) letterIn = c;
+			//om vi har redan har en bokstav och detta är en siffra
+			else if (letterIn != 0 && isdigit(c)) numberIn = c;
+			//om vi kommer hit är inputen inte giltig
+			else invalidInput = true;
 		}
-		else invalidInput = false;
+		
+		//bearbeta inputen till index-form
+		x = tolower(letterIn) - 97; //'a' är 97
+		y = numberIn - 49; //'1' är 49 index börjar på 0
+		
+		//om ogiltig input eller koordinater utanför spelplanen
+		if (invalidInput || x < 0 || x > 7 || y < 0 || y > 7) {
+			invalidInput = true;
 
-	} while (invalidInput);
+			//flytta markören två rader up ([F)
+			std::cout << "\033[F\033[F"; 
+			//rensa raden ([2K), efterfråga ny inmatning, gå ner en rad och rensa den
+			std::cout << "\033[2KVar god mata in giltiga värden(ex. \"f3\").\n\033[2K";
+		}
+	} while (invalidInput); //om ogitlig input, hoppa upp igen
 
-	return { x,y };
+	return { x,y }; //returnera bearbetade, gilitga koordinater.
 }
 
 //[6]
@@ -147,7 +170,8 @@ int main() {
 	settings.player2iscomp = true;
 	while (_getch()) {
 		displayBoard(gameBoard, settings);
-		getPlayerInput();
+		GameCoordinate coords = getPlayerInput();
+		
 	}
 	return 0;
 }
