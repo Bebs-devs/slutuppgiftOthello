@@ -21,6 +21,9 @@ Svart börjar
 2. FUNKTION sök möjliga drag
    - parameter bräde[1]
    - returnera lista över drag (eventuellt tom)
+2.1 FUNKTION kolla om drag är möjligt
+   - parameter bräde[1] och drag[0]
+   - returnera sant/falskt
 3. FUNKTION lägg till bricka till brädet
    - parameter bräde[1], koordinat
    - flippa påverkade brickor
@@ -28,6 +31,7 @@ Svart börjar
 4. clFUNKTION skriv ut brädet
    - parameter bräde[1] , inställningar och overlay av möjliga drag
 5. clFUNKTION ta input på var spelaren vill lägga
+   - parameter bräde[1]
    - returnera drag (koordinater) [0]
 6. clFUNKTION initialisera menyn, kör mot dator (välj svårighetsgrad) eller vän
    - returnera inställningar[-1]
