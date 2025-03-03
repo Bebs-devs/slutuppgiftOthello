@@ -3,8 +3,9 @@
 #include <locale>
 #include <vector>
 #include <string>
-#include <cctype>
-#include <algorithm>
+#include <cctype> //for isAlpha och isSpace
+#include <chrono>
+#include <thread>
 
 typedef signed char int8;
 
@@ -134,9 +135,12 @@ std::vector<GameCoordinates> getListOfPossibleMoves(Board &board) {
 }
 
 //[3]
-bool placeDisc(Board& board, GameCoordinates coords) {
-	board.discs[coords.y][coords.x] = board.isBlacksTurn ? 'b' : 'c';
-	board.isBlacksTurn = board.isBlacksTurn ? false : true;
+void placeDisc(Board& board, GameCoordinates coords) {
+	//relativ färg till färg på det drag som kollas
+	char sameColor = board.isBlacksTurn ? 'b' : 'c';
+	char otherColor = board.isBlacksTurn ? 'c' : 'b';
+
+	board.discs[coords.y][coords.x] = sameColor;
 	board.numberOfDiscs[board.isBlacksTurn ? 0 : 1] += 1;
 
 	board.adjacents[coords.y][coords.x] = false;
@@ -148,11 +152,61 @@ bool placeDisc(Board& board, GameCoordinates coords) {
 		board.adjacents[adjCoords.y][adjCoords.x] = true;
 	}
 
-	return true;
+	
+
+	//iterera alla riktningar
+	for (int i = 0; i < 8; ++i) {
+		bool flipConfirmed = false;
+		std::vector<GameCoordinates> squaresToBeFlipped;
+		////gå ett steg i riktningen
+		//GameCoordinates currCoords = { coords.y + GameCoordinates::translations[i][0],
+		//	coords.x + GameCoordinates::translations[i][1] };
+
+		////gå till nästa riktning om vi är utanför spelplanen
+		//if (currCoords.isInValid()) continue;
+		////eller om INTE motsatt färg (alltså tom eller samma)
+		//if (board.discs[currCoords.y][currCoords.x] != otherColor) continue;
+
+		///*har vi kommit så här långt har vi en bricka med motsatt färg
+		//för att utföra ett drag krävs också en bricka med samma färg i
+		//slutet av kedjan med brickor i motsatt färg.
+		//*/
+		GameCoordinates currCoords = coords;
+		while (true) {
+			//gå ett steg i riktningen
+			currCoords = { currCoords.y + GameCoordinates::translations[i][0],
+			currCoords.x + GameCoordinates::translations[i][1] };
+
+			//fortsätt till nästa riktning om vi är utanför spelplanen
+			if (currCoords.isInValid()) break;
+			//eller på en tom ruta
+			if (board.discs[currCoords.y][currCoords.x] == 'a') break;
+
+			//hittar vi däremot en bricka med samma färg kan vi flippa (förutsatt att det finns något att flippa)
+			if (board.discs[currCoords.y][currCoords.x] == sameColor && !squaresToBeFlipped.empty()) {
+				flipConfirmed = true;
+				break;
+			}
+
+			//om det är motsatt färg lägger vi till
+			squaresToBeFlipped.push_back(currCoords);
+		}
+		//om vi har bekräftat vändningen flippar vi rutorna 
+		if (flipConfirmed) {
+			for (GameCoordinates square : squaresToBeFlipped) {
+				board.discs[square.y][square.x] = sameColor;
+				board.numberOfDiscs[board.isBlacksTurn ? 0 : 1]++;
+				board.numberOfDiscs[board.isBlacksTurn ? 1 : 0]--;
+			}
+		}
+
+
+	}
+	board.isBlacksTurn = board.isBlacksTurn ? false : true;
 }
 
 //[4]
-void displayBoard(Board& board, GameSettings& settings, std::vector<GameCoordinates> movesOverlay = { {9,9} }) {
+void displayBoard(Board& board, GameSettings& settings, std::vector<GameCoordinates> movesOverlay = { }) {
 	//symboler som ska skrivas ut
 	std::string emptySymbol = " .", blackSymbol = " S", whiteSymbol = " V", possibleSymbol = " *";
 
@@ -173,7 +227,7 @@ void displayBoard(Board& board, GameSettings& settings, std::vector<GameCoordina
 			//OVERLAY AV MÖJLIGA DRAG
 			//vi förutsätter att listan över möjliga drag är sorterad
 			//om rutan vi är på är ett möjligt drag
-			if (movesOverlay[overlayCounter].y == rowNumber && movesOverlay[overlayCounter].x == columnNumber) {
+			if (!movesOverlay.empty() && movesOverlay[overlayCounter].y == rowNumber && movesOverlay[overlayCounter].x == columnNumber) {
 				//inkrementera räknaren men inte om vi har nått slutet på listan
 				overlayCounter += overlayCounter<movesOverlay.size()-1 ? 1 : 0;
 				//skriv ut symbolen som representerar ett möjligt drag
@@ -219,7 +273,7 @@ void displayBoard(Board& board, GameSettings& settings, std::vector<GameCoordina
 }
 
 //[5]
-GameCoordinates getValidPlayerInput(Board & board, GameSettings settings) {
+GameCoordinates getValidPlayerInput(Board & board, GameSettings settings, std::vector<GameCoordinates> movesOverlay = { {9,9} }) {
 	bool invalidInput; //är inputen "trasig"?
 	std::string inputLine; //spara rå input
 
@@ -256,14 +310,14 @@ GameCoordinates getValidPlayerInput(Board & board, GameSettings settings) {
 		if (invalidInput || finalInput.isInValid()) {
 			invalidInput = true;
 
-			displayBoard(board, settings); //Skriv ut brädet igen
+			displayBoard(board, settings, movesOverlay); //Skriv ut brädet igen
 			std::cout << "Inmatning måste vara en koordinat på brädet (ex. f2)\n";
 		}
 		//om ogiltigt drag (men giltig input i övrigt)
 		else if (!isValidMove(board, finalInput)) {
 			invalidInput = true;
 
-			displayBoard(board, settings); //Skriv ut brädet igen
+			displayBoard(board, settings, movesOverlay); //Skriv ut brädet igen
 			std::cout << "Du kan tyvärr inte lägga där\n";
 		}
 	} while (invalidInput); //om ogitlig input, hoppa upp igen
@@ -286,6 +340,21 @@ GameCoordinates chooseComputerMove(Board& board, std::vector<GameCoordinates>, i
 	return { 0,0 };
 }
 
+//[9]
+bool makePlayerMove(Board& board, GameSettings settings) {
+	std::vector<GameCoordinates> possibleMoves = getListOfPossibleMoves(board);
+	displayBoard(board, settings, possibleMoves);
+	if (possibleMoves.empty()) {
+		std::cout << "Du har inga möjliga drag, turen går över till nästa spelare\n";
+		board.isBlacksTurn = board.isBlacksTurn ? false : true;
+		std::this_thread::sleep_for(std::chrono::seconds(1));
+		return false;
+	}
+
+	GameCoordinates coords = getValidPlayerInput(board, settings, possibleMoves);
+	placeDisc(board, coords);
+	return true;
+}
 
 
 int main() {
@@ -295,10 +364,7 @@ int main() {
 	settings.computerDifficulty = 0;
 	settings.player1iscomp = false;
 	settings.player2iscomp = true;
-	while (_getch()) {
-		displayBoard(gameBoard, settings, getListOfPossibleMoves(gameBoard));
-		GameCoordinates coords = getValidPlayerInput(gameBoard, settings);
-		placeDisc(gameBoard, coords);
-	}
+	while (makePlayerMove(gameBoard, settings) || makePlayerMove(gameBoard, settings)) {}
+	std::cout << "SPELET ÄR ÖVER";
 	return 0;
 }

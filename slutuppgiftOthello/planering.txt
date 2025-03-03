@@ -27,7 +27,6 @@ Svart börjar
 3. FUNKTION lägg till bricka till brädet
    - parameter bräde[1], koordinat
    - flippa påverkade brickor
-   - returnera true/false om giltigt drag
 4. clFUNKTION skriv ut brädet
    - parameter bräde[1] , inställningar och overlay av möjliga drag
 5. clFUNKTION ta input på var spelaren vill lägga
@@ -43,16 +42,14 @@ Svart börjar
    - returnera drag
 9. gameFUNKTION görspelardrag
    - parameter är bräde[1]
-   - skriver ut "din tur vart vill du lägga"
+   - skriver ut "din tur var vill du lägga"
    - visar möjliga drag [4]
    - tar input [5]
    - lägger till bricka [3]
-   - returnera bool huruvida det gick
 10. gameFUNKTION gördatordrag
    - parameter är bräde[1]
    - räkna ut drag [8]
    - lägg bricka [3]
-   - returnera bool huruvida det gick
 
 main{
 	do:
