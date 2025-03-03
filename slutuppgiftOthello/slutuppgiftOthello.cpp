@@ -8,7 +8,6 @@
 
 typedef signed char int8;
 
-
 struct GameSettings
 {
 	bool player1iscomp, player2iscomp;
@@ -26,6 +25,7 @@ struct GameCoordinates
 	static const int8 translations[8][2];
 	int y;
 	int x;
+
 	bool isInValid() {
 		if (x < 0 || x > 7 || y < 0 || y > 7) return true;
 		return false;
@@ -152,7 +152,7 @@ bool placeDisc(Board& board, GameCoordinates coords) {
 }
 
 //[4]
-void displayBoard(Board& board, GameSettings &settings ,std::vector<GameCoordinates> movesOverlay = {}) {
+void displayBoard(Board& board, GameSettings& settings, std::vector<GameCoordinates> movesOverlay = { {9,9} }) {
 	//symboler som ska skrivas ut
 	std::string emptySymbol = " .", blackSymbol = " S", whiteSymbol = " V", possibleSymbol = " *";
 
