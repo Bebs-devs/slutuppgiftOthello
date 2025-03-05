@@ -3,9 +3,10 @@
 #include <locale>
 #include <vector>
 #include <string>
-#include <cctype> //for isAlpha och isSpace
+#include <cctype> //för isAlpha och isSpace
 #include <chrono>
 #include <thread>
+#include <ctime>
 
 typedef signed char int8;
 
@@ -77,6 +78,21 @@ struct Board
 		adjacents[5][4] = true;
 		adjacents[5][5] = true;
 	}
+
+	bool countDiscs(){
+		int black = 0, white = 0;
+		for (int i = 0; i < 8; ++i) {
+			for (int j = 0; j < 8; j++) {
+				if (discs[i][j] == 'b') black++;
+				else if (discs[i][j] == 'c') white++;
+			}
+		}
+		if (numberOfDiscs[0] != black || numberOfDiscs[1] != white) {
+			std::cout << "ALARM ALARM";
+			return true;
+		}
+		return false;
+	}
 };
 
 //[2.1]
@@ -109,7 +125,7 @@ bool isValidMove(Board & board, GameCoordinates move) {
 			if (currCoords.isInValid()) break;
 			//eller på en tom ruta
 			if (board.discs[currCoords.y][currCoords.x] == 'a') break;
-
+			 
 			//hittar vi däremot en bricka med samma färg är draget giltigt
 			if (board.discs[currCoords.y][currCoords.x] == sameColor) return true;
 
@@ -157,7 +173,7 @@ void placeDisc(Board& board, GameCoordinates coords) {
 	//iterera alla riktningar
 	for (int i = 0; i < 8; ++i) {
 		bool flipConfirmed = false;
-		std::vector<GameCoordinates> squaresToBeFlipped;
+		std::vector<GameCoordinates> squaresToBeFlipped = {};
 		////gå ett steg i riktningen
 		//GameCoordinates currCoords = { coords.y + GameCoordinates::translations[i][0],
 		//	coords.x + GameCoordinates::translations[i][1] };
@@ -183,8 +199,8 @@ void placeDisc(Board& board, GameCoordinates coords) {
 			if (board.discs[currCoords.y][currCoords.x] == 'a') break;
 
 			//hittar vi däremot en bricka med samma färg kan vi flippa (förutsatt att det finns något att flippa)
-			if (board.discs[currCoords.y][currCoords.x] == sameColor && !squaresToBeFlipped.empty()) {
-				flipConfirmed = true;
+			if (board.discs[currCoords.y][currCoords.x] == sameColor) {
+				if (!squaresToBeFlipped.empty()) flipConfirmed = true;
 				break;
 			}
 
@@ -206,9 +222,9 @@ void placeDisc(Board& board, GameCoordinates coords) {
 }
 
 //[4]
-void displayBoard(Board& board, GameSettings& settings, std::vector<GameCoordinates> movesOverlay = { }) {
+void displayBoard(Board& board, GameSettings& settings, std::vector<GameCoordinates> movesOverlay = { }, GameCoordinates highlighted = {9,9}) {
 	//symboler som ska skrivas ut
-	std::string emptySymbol = " .", blackSymbol = " S", whiteSymbol = " V", possibleSymbol = " *";
+	std::string emptySymbol = " .", blackSymbol = " S", whiteSymbol = " V", possibleSymbol = " *", highlightBlackSymbol = "\033[32m S\033[0m", highlightWhiteSymbol = "\033[32m V\033[0m";
 
 	//skriv ut brädets norra kant
 	std::cout << "\033[2J\033[H\n  a b c d e f g h\n";
@@ -224,6 +240,7 @@ void displayBoard(Board& board, GameSettings& settings, std::vector<GameCoordina
 
 		//iterera genom raden
 		for (int columnNumber = 0; columnNumber < 8; ++columnNumber) {
+			
 			//OVERLAY AV MÖJLIGA DRAG
 			//vi förutsätter att listan över möjliga drag är sorterad
 			//om rutan vi är på är ett möjligt drag
@@ -235,6 +252,10 @@ void displayBoard(Board& board, GameSettings& settings, std::vector<GameCoordina
 				//gå direkt till nästa ruta (vi vill ju inte skriva ut dubbelt)
 				continue;
 			}
+			bool highlightPosition = false;
+			if (highlighted.y == rowNumber && highlighted.x == columnNumber) {
+				highlightPosition = true;
+			}
 
 			//kolla vad rutan har för status
 			switch (rowArray[columnNumber])
@@ -243,10 +264,10 @@ void displayBoard(Board& board, GameSettings& settings, std::vector<GameCoordina
 				std::cout << emptySymbol;
 				break;
 			case 'b': //om svart
-				std::cout << blackSymbol;
+				std::cout << (highlightPosition ? highlightBlackSymbol : blackSymbol);
 				break;
 			case 'c': //om vit
-				std::cout << whiteSymbol;
+				std::cout << (highlightPosition ? highlightWhiteSymbol : whiteSymbol);
 				break;
 			default: //om annat, vilket endast kan betyda fel
 				std::cout << "ERROR";
@@ -356,15 +377,41 @@ bool makePlayerMove(Board& board, GameSettings settings) {
 	return true;
 }
 
+bool makeComputerMove(Board& board, GameSettings settings, int difficulty = 0) {
+	std::vector<GameCoordinates> possibleMoves = getListOfPossibleMoves(board);
+	
+	if (possibleMoves.empty()) {
+		std::cout << "Du har inga möjliga drag, turen går över till nästa spelare\n";
+		board.isBlacksTurn = board.isBlacksTurn ? false : true;
+		std::this_thread::sleep_for(std::chrono::seconds(1));
+		return false;
+	}
+	
+	int moveIndex = rand() % possibleMoves.size();
+	GameCoordinates coords = possibleMoves[moveIndex];
+	placeDisc(board, coords);
+	possibleMoves.erase(possibleMoves.begin() + moveIndex);
+	std::cout << "Lade: " << char(coords.x+97) << " " << coords.y+1;
+	displayBoard(board, settings, possibleMoves, {coords});
+	std::this_thread::sleep_for(std::chrono::seconds(1));
+	return true;
+}
+
 
 int main() {
+	srand(time(0));
 	setlocale(LC_ALL, "sv_SE");
 	Board gameBoard;
 	GameSettings settings;
 	settings.computerDifficulty = 0;
 	settings.player1iscomp = false;
 	settings.player2iscomp = true;
-	while (makePlayerMove(gameBoard, settings) || makePlayerMove(gameBoard, settings)) {}
+	while (true) {
+		if (gameBoard.countDiscs()) break;
+		bool player1 = makeComputerMove(gameBoard, settings);
+		bool player2 = makeComputerMove(gameBoard, settings);
+		if (!(player1 || player2)) break;
+	}
 	std::cout << "SPELET ÄR ÖVER";
 	return 0;
 }
