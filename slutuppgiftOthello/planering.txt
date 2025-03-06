@@ -34,6 +34,10 @@ Svart börjar
    - returnera drag (koordinater) [0]
 6. clFUNKTION initialisera menyn, kör mot dator (välj svårighetsgrad) eller vän
    - returnera inställningar[-1]
+6.1 hjälpFunktion skapa en enkel meny
+   - parameter text och alternativ
+   - användaren väljer med piltangenter
+   - returnerar index till valt alternativ
 7. clFUNKTION skriv út vinstmeddelande
    - parameter är bräde[1]
    - returnera huruvida spelaren vill köra igen

@@ -226,9 +226,9 @@ void placeDisc(Board& board, GameCoordinates coords) {
 void displayBoard(Board& board, GameSettings& settings, std::vector<GameCoordinates> movesOverlay = { }, GameCoordinates highlighted = {9,9}) {
 	//symboler som ska skrivas ut
 	std::string emptySymbol = "  ", 
-		blackSymbol = "\033[30m @", whiteSymbol = "\033[37m @", 
+		blackSymbol = "\033[30m X", whiteSymbol = "\033[37m O", 
 		possibleSymbol = "\033[38;5;27m +", 
-		highlightBlackSymbol = "\033[33m S", highlightWhiteSymbol = "\033[33m V";
+		highlightBlackSymbol = "\033[33m X", highlightWhiteSymbol = "\033[33m O";
 
 	//skriv ut brädets norra kant
 	std::cout << "\033[2J\033[H\n  a b c d e f g h\n";
@@ -352,9 +352,53 @@ GameCoordinates getValidPlayerInput(Board & board, GameSettings settings, std::v
 	return finalInput; //returnera bearbetade, gilitga koordinater.
 }
 
+//[6.1]
+int simpleSelectionChoice(std::string header, std::vector<std::string> options) {
+	int keyPress;
+	int selection = 0;
+	std::cout << "\033[2J";
+	while (true) {
+		std::cout << "\033[H" << header << '\n';
+		for (int i = 0; i < options.size(); ++i) {
+			if (i == selection)
+				std::cout << "> " << options[i] << " <         \n";
+			else std::cout << "  " << options[i] << "           \n";
+		}
+		keyPress = _getch();
+		if (keyPress == 13) break;
+		if (keyPress != 224) continue;
+
+		keyPress = _getch();
+		if (keyPress == 80) { //ned-pil
+			selection += selection <= options.size() - 1 ? 1 : 0;
+		}
+		else if (keyPress == 72) { //upp-pil
+			selection -= selection > 0 ? 1 : 0;
+		}
+		
+	}
+	return selection;
+}
+
 //[6]
 void initGameSettings(GameSettings& settings) {
+	const std::vector<std::string> optionsPlayer1 = { "Svart ska spelas av människa", "Svart ska spelas av dator" };
+	const std::vector<std::string> optionsPlayer2 = { "Vit ska spelas av människa", "Vit ska spelas av dator" };
+	const std::vector<std::string> optionsDifficulty = { "0 - Slumpade drag", "1 - Enkel", "2 - Medel", "3 - Svår", "4 - Omöjlig" };
 
+	settings.player1iscomp = (bool)simpleSelectionChoice("\n Välkommen till Othello\nSvart börjar spelet. Välj alternativ för svart:\n",optionsPlayer1);
+	
+	if (settings.player1iscomp) {
+		
+		settings.comp1Difficulty = simpleSelectionChoice("\n Välommen till Othello\nSvart spelas av en dator, vilken svårighetsgrad?\n", optionsDifficulty);
+	}
+
+	settings.player2iscomp = (bool)simpleSelectionChoice("\n Välkommen till Othello\nVit fortsätter spelet. Välj alternativ för vit:\n", optionsPlayer2);
+
+	if (settings.player2iscomp) {
+
+		settings.comp2Difficulty = simpleSelectionChoice("\n Välkommen till Othello\nVit spelas av en dator, vilken svårighetsgrad?\n", optionsDifficulty);
+	}
 }
 
 //[7]
@@ -430,13 +474,14 @@ int main() {
 	GameSettings settings;
 	settings.player1iscomp = true;
 	settings.player2iscomp = true;
+	initGameSettings(settings);
 	while (true) {
 		gameBoard = Board();
 		bool player1successful = true, player2successful = true;
 		while (player1successful || player2successful) {
 			if (gameBoard.countDiscs()) break; //DEBUG
-			player1successful = makePlayerMove(gameBoard, settings);
-			player2successful = makePlayerMove(gameBoard, settings);
+			player1successful = settings.player1iscomp ? makeComputerMove(gameBoard, settings) : makePlayerMove(gameBoard, settings);
+			player2successful = settings.player2iscomp ? makeComputerMove(gameBoard, settings) : makePlayerMove(gameBoard, settings);
 		}
 		endGame(gameBoard, settings);
 		std::cout << "Vill du köra igen med samma inställningar? Klicka ENTER.\nVill du avsluta? Klicka valfri tangent\n";
