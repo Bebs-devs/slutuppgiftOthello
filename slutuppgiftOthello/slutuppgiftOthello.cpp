@@ -13,12 +13,13 @@ typedef signed char int8;
 struct GameSettings
 {
 	bool player1iscomp, player2iscomp;
-	int computerDifficulty;
+	int comp1Difficulty, comp2Difficulty;
 
 	GameSettings() {
 		player1iscomp = false;
 		player2iscomp = false;
-		computerDifficulty = 0;
+		comp1Difficulty = 0;
+		comp2Difficulty = 0;
 	}
 };
 
@@ -224,7 +225,10 @@ void placeDisc(Board& board, GameCoordinates coords) {
 //[4]
 void displayBoard(Board& board, GameSettings& settings, std::vector<GameCoordinates> movesOverlay = { }, GameCoordinates highlighted = {9,9}) {
 	//symboler som ska skrivas ut
-	std::string emptySymbol = " .", blackSymbol = " S", whiteSymbol = " V", possibleSymbol = " *", highlightBlackSymbol = "\033[32m S\033[0m", highlightWhiteSymbol = "\033[32m V\033[0m";
+	std::string emptySymbol = "  ", 
+		blackSymbol = "\033[30m @", whiteSymbol = "\033[37m @", 
+		possibleSymbol = "\033[38;5;27m +", 
+		highlightBlackSymbol = "\033[33m S", highlightWhiteSymbol = "\033[33m V";
 
 	//skriv ut brädets norra kant
 	std::cout << "\033[2J\033[H\n  a b c d e f g h\n";
@@ -235,6 +239,7 @@ void displayBoard(Board& board, GameSettings& settings, std::vector<GameCoordina
 	for (int rowNumber = 0; rowNumber < 8; ++rowNumber) {
 
 		std::cout << rowNumber + 1; //skriv ut radnummret (+1 för 1-8 istället för 0-7)
+		std::cout << "\033[48;5;28m";
 
 		char* rowArray = board.discs[rowNumber]; //spara alla rutor på raden i en temp-variabel
 
@@ -277,6 +282,7 @@ void displayBoard(Board& board, GameSettings& settings, std::vector<GameCoordina
 
 		/*till höger om brädet står vissa detaljer. Eftersom dessa skrivs ut
 		på specifika rader, kollar vi här efter rader 1, 2 och 4 (från användarens perspektiv)*/
+		std::cout << "\033[0m";
 		//spelare 1 (svart) - antal brickor och spelartyp
 		if (rowNumber == 0) std::cout << "  " << board.numberOfDiscs[0]
 			<< " - Svart" << (settings.player1iscomp ? " (AI)" : "");
@@ -352,7 +358,26 @@ void initGameSettings(GameSettings& settings) {
 }
 
 //[7]
-bool endGame(Board& board) {
+bool endGame(Board& board, GameSettings& settings) {
+	static int blackWins = 0, whiteWins = 0, ties = 0;
+	std::cout << "SPELET ÄR ÖVER\n";
+	if (board.numberOfDiscs[0] == board.numberOfDiscs[1]) {
+		std::cout << "Se där, det blev lika!\n";
+		++ties;
+	}
+	else if (board.numberOfDiscs[0] > board.numberOfDiscs[1]) {
+		std::cout << "Grattis"<< (settings.player1iscomp ? " datorn" : " spelare") << ", SVART vann\n";
+		++blackWins;
+	}
+	else {
+		std::cout << "Grattis" << (settings.player2iscomp ? " datorn" : " spelare") << ", VIT vann\n";
+		++whiteWins;
+	}
+	std::cout << "Resultat: \n";
+	std::cout << "Svart: " << board.numberOfDiscs[0] << " brickor\n";
+	std::cout << "Vit  : " << board.numberOfDiscs[1] << " brickor\n";
+	std::cout << "Ställning under programmet körtid:\n";
+	std::cout << "Svart " << blackWins << " - " << whiteWins << " Vit\n";
 	return false;
 }
 
@@ -383,7 +408,7 @@ bool makeComputerMove(Board& board, GameSettings settings, int difficulty = 0) {
 	if (possibleMoves.empty()) {
 		std::cout << "Du har inga möjliga drag, turen går över till nästa spelare\n";
 		board.isBlacksTurn = board.isBlacksTurn ? false : true;
-		std::this_thread::sleep_for(std::chrono::seconds(1));
+		std::this_thread::sleep_for(std::chrono::milliseconds(10));
 		return false;
 	}
 	
@@ -393,7 +418,7 @@ bool makeComputerMove(Board& board, GameSettings settings, int difficulty = 0) {
 	possibleMoves.erase(possibleMoves.begin() + moveIndex);
 	std::cout << "Lade: " << char(coords.x+97) << " " << coords.y+1;
 	displayBoard(board, settings, possibleMoves, {coords});
-	std::this_thread::sleep_for(std::chrono::seconds(1));
+	//std::this_thread::sleep_for(std::chrono::milliseconds(10));
 	return true;
 }
 
@@ -403,15 +428,20 @@ int main() {
 	setlocale(LC_ALL, "sv_SE");
 	Board gameBoard;
 	GameSettings settings;
-	settings.computerDifficulty = 0;
-	settings.player1iscomp = false;
+	settings.player1iscomp = true;
 	settings.player2iscomp = true;
 	while (true) {
-		if (gameBoard.countDiscs()) break;
-		bool player1 = makeComputerMove(gameBoard, settings);
-		bool player2 = makeComputerMove(gameBoard, settings);
-		if (!(player1 || player2)) break;
+		gameBoard = Board();
+		bool player1successful = true, player2successful = true;
+		while (player1successful || player2successful) {
+			if (gameBoard.countDiscs()) break; //DEBUG
+			player1successful = makePlayerMove(gameBoard, settings);
+			player2successful = makePlayerMove(gameBoard, settings);
+		}
+		endGame(gameBoard, settings);
+		std::cout << "Vill du köra igen med samma inställningar? Klicka ENTER.\nVill du avsluta? Klicka valfri tangent\n";
+		if (_getch() != 13) break; //13 är koden för enter
+
 	}
-	std::cout << "SPELET ÄR ÖVER";
 	return 0;
 }
