@@ -425,9 +425,73 @@ bool endGame(Board& board, GameSettings& settings) {
 	return false;
 }
 
+int evaluatePosition(Board& board){
+	return board.numberOfDiscs[0];
+}
+
+int minMax(Board& board,int depth){
+	if (depth == 0) {
+		return evaluatePosition(board);
+	}
+	std::vector<GameCoordinates> possibleMoves = getListOfPossibleMoves(board);
+
+	if (board.isBlacksTurn) {
+		int highestEval = -INT_MAX;
+		for (int i = 0; i < possibleMoves.size(); ++i) {
+			Board newBoard = board;
+			placeDisc(newBoard, possibleMoves[i]);
+			int eval = minMax(newBoard, depth-1);
+			if (eval > highestEval) {
+				highestEval = eval;
+			}
+		}
+		return highestEval;
+	}
+	else {
+		int lowestEval = INT_MAX;
+		for (int i = 0; i < possibleMoves.size(); ++i) {
+			Board newBoard = board;
+			placeDisc(newBoard, possibleMoves[i]);
+			int eval = minMax(newBoard, depth-1);
+			if (eval < lowestEval) {
+				lowestEval = eval;
+			}
+		}
+		return lowestEval;
+	}
+}
+
 //[8]
-GameCoordinates chooseComputerMove(Board& board, std::vector<GameCoordinates>, int computerDifficulty) {
-	return { 0,0 };
+GameCoordinates chooseComputerMove(Board& board, int computerDifficulty) {
+	std::vector<GameCoordinates> possibleMoves = getListOfPossibleMoves(board);
+	int searchDepth = computerDifficulty, bestIndex = -1;
+
+	if (board.isBlacksTurn) {
+		int highestEval = -INT_MAX;
+		for (int i = 0; i < possibleMoves.size(); ++i) {
+			Board newBoard = board;
+			placeDisc(newBoard, possibleMoves[i]);
+			int eval = minMax(newBoard, searchDepth);
+			if (eval > highestEval) {
+				highestEval = eval;
+				bestIndex = i;
+			}
+		}
+	}
+	else {
+		int lowestEval = INT_MAX;
+		for (int i = 0; i < possibleMoves.size(); ++i) {
+			Board newBoard = board;
+			placeDisc(newBoard, possibleMoves[i]);
+			int eval = minMax(newBoard, searchDepth);
+			if (eval < lowestEval) {
+				lowestEval = eval;
+				bestIndex = i;
+			}
+		}
+	}
+
+	return { possibleMoves[bestIndex] };
 }
 
 //[9]
@@ -458,11 +522,11 @@ bool makeComputerMove(Board& board, GameSettings settings, int difficulty = 0) {
 	
 	int moveIndex = rand() % possibleMoves.size();
 	GameCoordinates coords = possibleMoves[moveIndex];
-	placeDisc(board, coords);
-	possibleMoves.erase(possibleMoves.begin() + moveIndex);
+	placeDisc(board, chooseComputerMove(board,5));
+	//possibleMoves.erase(possibleMoves.begin() + moveIndex);
 	std::cout << "Lade: " << char(coords.x+97) << " " << coords.y+1;
-	displayBoard(board, settings, possibleMoves, {coords});
-	//std::this_thread::sleep_for(std::chrono::milliseconds(10));
+	displayBoard(board, settings, {}, {coords});
+	std::this_thread::sleep_for(std::chrono::milliseconds(10));
 	return true;
 }
 
