@@ -370,7 +370,7 @@ int simpleSelectionChoice(std::string header, std::vector<std::string> options) 
 
 		keyPress = _getch();
 		if (keyPress == 80) { //ned-pil
-			selection += selection <= options.size() - 1 ? 1 : 0;
+			selection += selection < options.size() - 1 ? 1 : 0;
 		}
 		else if (keyPress == 72) { //upp-pil
 			selection -= selection > 0 ? 1 : 0;
@@ -384,7 +384,7 @@ int simpleSelectionChoice(std::string header, std::vector<std::string> options) 
 void initGameSettings(GameSettings& settings) {
 	const std::vector<std::string> optionsPlayer1 = { "Svart ska spelas av människa", "Svart ska spelas av dator" };
 	const std::vector<std::string> optionsPlayer2 = { "Vit ska spelas av människa", "Vit ska spelas av dator" };
-	const std::vector<std::string> optionsDifficulty = { "0 - Slumpade drag", "1 - Enkel", "2 - Medel", "3 - Svår", "4 - Omöjlig" };
+	const std::vector<std::string> optionsDifficulty = { "0 - Slumpade drag", "1 - Enkel", "2 - Medel", "3 - Svår", "4 - Omöjlig", "5", "6", "7"};
 
 	settings.player1iscomp = (bool)simpleSelectionChoice("\n Välkommen till Othello\nSvart börjar spelet. Välj alternativ för svart:\n",optionsPlayer1);
 	
@@ -472,7 +472,7 @@ GameCoordinates chooseComputerMove(Board& board, int computerDifficulty) {
 			Board newBoard = board;
 			placeDisc(newBoard, possibleMoves[i]);
 			int eval = minMax(newBoard, searchDepth);
-			if (eval > highestEval) {
+			if (eval >= highestEval) {
 				highestEval = eval;
 				bestIndex = i;
 			}
@@ -484,14 +484,14 @@ GameCoordinates chooseComputerMove(Board& board, int computerDifficulty) {
 			Board newBoard = board;
 			placeDisc(newBoard, possibleMoves[i]);
 			int eval = minMax(newBoard, searchDepth);
-			if (eval < lowestEval) {
+			if (eval <= lowestEval) {
 				lowestEval = eval;
 				bestIndex = i;
 			}
 		}
 	}
 
-	return { possibleMoves[bestIndex] };
+	return possibleMoves[bestIndex];
 }
 
 //[9]
@@ -522,7 +522,7 @@ bool makeComputerMove(Board& board, GameSettings settings, int difficulty = 0) {
 	
 	int moveIndex = rand() % possibleMoves.size();
 	GameCoordinates coords = possibleMoves[moveIndex];
-	placeDisc(board, chooseComputerMove(board,5));
+	placeDisc(board, chooseComputerMove(board,difficulty));
 	//possibleMoves.erase(possibleMoves.begin() + moveIndex);
 	std::cout << "Lade: " << char(coords.x+97) << " " << coords.y+1;
 	displayBoard(board, settings, {}, {coords});
@@ -544,8 +544,8 @@ int main() {
 		bool player1successful = true, player2successful = true;
 		while (player1successful || player2successful) {
 			if (gameBoard.countDiscs()) break; //DEBUG
-			player1successful = settings.player1iscomp ? makeComputerMove(gameBoard, settings) : makePlayerMove(gameBoard, settings);
-			player2successful = settings.player2iscomp ? makeComputerMove(gameBoard, settings) : makePlayerMove(gameBoard, settings);
+			player1successful = settings.player1iscomp ? makeComputerMove(gameBoard, settings, settings.comp1Difficulty) : makePlayerMove(gameBoard, settings);
+			player2successful = settings.player2iscomp ? makeComputerMove(gameBoard, settings, settings.comp2Difficulty) : makePlayerMove(gameBoard, settings);
 		}
 		endGame(gameBoard, settings);
 		std::cout << "Vill du köra igen med samma inställningar? Klicka ENTER.\nVill du avsluta? Klicka valfri tangent\n";
