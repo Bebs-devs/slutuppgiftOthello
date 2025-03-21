@@ -127,10 +127,14 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="clRender.cpp" />
     <ClCompile Include="slutuppgiftOthello.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="planering.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="clRender.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

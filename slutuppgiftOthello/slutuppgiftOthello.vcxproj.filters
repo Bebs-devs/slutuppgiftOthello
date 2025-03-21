@@ -18,8 +18,16 @@
     <ClCompile Include="slutuppgiftOthello.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="clRender.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Text Include="planering.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="clRender.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

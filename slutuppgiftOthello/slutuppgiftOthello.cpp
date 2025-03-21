@@ -7,6 +7,7 @@
 #include <chrono>
 #include <thread>
 #include <ctime>
+#include "clRender.h"
 
 typedef signed char int8;
 
@@ -536,21 +537,22 @@ int main() {
 	setlocale(LC_ALL, "sv_SE");
 	Board gameBoard;
 	GameSettings settings;
-	settings.player1iscomp = true;
-	settings.player2iscomp = true;
-	initGameSettings(settings);
+
 	while (true) {
 		gameBoard = Board();
+		initGameSettings(settings);
 		bool player1successful = true, player2successful = true;
 		while (player1successful || player2successful) {
-			if (gameBoard.countDiscs()) break; //DEBUG
 			player1successful = settings.player1iscomp ? makeComputerMove(gameBoard, settings, settings.comp1Difficulty) : makePlayerMove(gameBoard, settings);
 			player2successful = settings.player2iscomp ? makeComputerMove(gameBoard, settings, settings.comp2Difficulty) : makePlayerMove(gameBoard, settings);
 		}
 		endGame(gameBoard, settings);
-		std::cout << "Vill du köra igen med samma inställningar? Klicka ENTER.\nVill du avsluta? Klicka valfri tangent\n";
+		std::cout << "Vill du köra igen? Klicka ENTER.\nVill du avsluta? Klicka valfri tangent\n";
 		if (_getch() != 13) break; //13 är koden för enter
-
+		
+	}
+	while (true) {
+		render::init();
 	}
 	return 0;
 }
