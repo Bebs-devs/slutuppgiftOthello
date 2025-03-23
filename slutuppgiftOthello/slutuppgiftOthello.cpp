@@ -8,94 +8,9 @@
 #include <thread>
 #include <ctime>
 #include "clRender.h"
+#include "othelloResources.h"
 
-typedef signed char int8;
 
-struct GameSettings
-{
-	bool player1iscomp, player2iscomp;
-	int comp1Difficulty, comp2Difficulty;
-
-	GameSettings() {
-		player1iscomp = false;
-		player2iscomp = false;
-		comp1Difficulty = 0;
-		comp2Difficulty = 0;
-	}
-};
-
-struct GameCoordinates
-{
-	static const int8 translations[8][2];
-	int y;
-	int x;
-
-	bool isInValid() {
-		if (x < 0 || x > 7 || y < 0 || y > 7) return true;
-		return false;
-	}
-};
-const int8 GameCoordinates::translations[8][2] = {
-	  {-1,-1},{-1,0 },{-1,1 },{0,-1 },{0,1 },{1,-1 },{1,0 },{1,1 } };
-
-struct Board
-{
-	bool isBlacksTurn;
-	int numberOfDiscs[2] = { 0, 0 }; //{antal svarta brickor, antal vita brickor}
-	char discs[8][8] = {0}; //a tom, b svart, c vit
-	//[y][x] gäller för alla arrayer som håller positioner
-	bool adjacents[8][8] = {0}; //är ruta bredvid en ruta med bricka i.
-
-	Board() {
-		//den här funktionen körs när ett objekt av typ (klass) Board skapas
-
-		isBlacksTurn = true; //svart börjar alltid
-
-		//antal svarta brickor = antal vita brickor = 2
-		numberOfDiscs[0] = numberOfDiscs[1] = 2;
-
-		//iterera alla rutor och sätt deras status till tom ('a')
-		for (int i = 0; i < 8; ++i) {
-			for (int j = 0; j < 8; ++j) {
-				discs[i][j] = 'a';
-			}
-		}
-		//placera startbrickorna      ...
-		discs[3][3] = 'c'; //... a a ...
-		discs[3][4] = 'b'; //..a c b a..
-		discs[4][3] = 'b'; //..a b c a..
-		discs[4][4] = 'c'; //... a a ...
-		                        //    ...
-		//specifiera de rutor som är bredvid en ruta med en bricka i
-		adjacents[2][2] = true;
-		adjacents[2][3] = true;//    ...
-		adjacents[2][4] = true;//..1 1 1 1..
-		adjacents[2][5] = true;//..1 0 0 1..
-		adjacents[3][2] = true;//..1 0 0 1..
-		adjacents[3][5] = true;//..1 1 1 1..
-		adjacents[4][2] = true;//    ...
-		adjacents[4][5] = true;
-		adjacents[5][2] = true;
-		adjacents[5][3] = true;
-		adjacents[5][4] = true;
-		adjacents[5][5] = true;
-	}
-
-	bool countDiscs(){
-		int black = 0, white = 0;
-		for (int i = 0; i < 8; ++i) {
-			for (int j = 0; j < 8; j++) {
-				if (discs[i][j] == 'b') black++;
-				else if (discs[i][j] == 'c') white++;
-			}
-		}
-		if (numberOfDiscs[0] != black || numberOfDiscs[1] != white) {
-			std::cout << "ALARM ALARM";
-			return true;
-		}
-		return false;
-	}
-};
 
 //[2.1]
 bool isValidMove(Board & board, GameCoordinates move) {
@@ -537,6 +452,7 @@ int main() {
 	setlocale(LC_ALL, "sv_SE");
 	Board gameBoard;
 	GameSettings settings;
+	
 
 	while (true) {
 		gameBoard = Board();
@@ -550,9 +466,6 @@ int main() {
 		std::cout << "Vill du köra igen? Klicka ENTER.\nVill du avsluta? Klicka valfri tangent\n";
 		if (_getch() != 13) break; //13 är koden för enter
 		
-	}
-	while (true) {
-		render::init();
 	}
 	return 0;
 }

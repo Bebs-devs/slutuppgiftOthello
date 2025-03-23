@@ -2,11 +2,16 @@
 #include <iostream>
 #include <vector>
 #include <string>
+#include <chrono>
 using namespace render;
 
 
 static std::string displayState[12]; //index 1-8 för brädet
-
+static Board* renderedBoardPtr;
+static GameSettings* gameSettingsPtr;
+static GameCoordinates lastMove;
+static bool lastMoveVisible;
+static std::chrono::time_point<std::chrono::system_clock> splashExpiryTime;
 
 static void print() {
 	std::cout << "\033[H";
@@ -15,10 +20,6 @@ static void print() {
 	}
 }
 
-void render::update() {
-	
-	
-}
 
 void render::init() {
 	std::cout << "\033[?25l"; //göm skriv-markören
@@ -34,4 +35,53 @@ void render::init() {
 	displayState[10] = "[---------     ]";
 	displayState[11] = "123/13948";
 	print();
+}
+
+//försvinner vid ändring av brädet //TODO ADD ANIMATIONS
+void render::updatePossibleMoves(std::vector<GameCoordinates> moves)
+{
+}
+
+void render::setBoard(Board* board)
+{
+}
+
+void render::setSettings(GameSettings* settings)
+{
+}
+
+void render::updateSettings()
+{
+}
+
+void render::updateBoard()
+{
+}
+
+void render::updateAnimations()
+{
+}
+
+void render::updateSelectedSquare(GameCoordinates square)
+{
+}
+
+void render::updateLastMove(GameCoordinates move)
+{
+}
+
+void render::setLastMoveVisible(bool visible)
+{
+}
+
+void render::updateDebugText(std::string text)
+{
+}
+
+void render::updateComputerProgress(ComputerProgress progress)
+{
+}
+
+void render::splashText(std::string, int durationMs, bool halt)
+{
 }
