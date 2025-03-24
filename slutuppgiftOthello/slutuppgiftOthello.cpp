@@ -452,8 +452,12 @@ int main() {
 	setlocale(LC_ALL, "sv_SE");
 	Board gameBoard;
 	GameSettings settings;
-	
-
+	render::init();
+	render::setBoard(&gameBoard);
+	render::setSettings(&settings);
+	render::updateBoard();
+	render::updateSettings();
+	std::this_thread::sleep_for(std::chrono::milliseconds(10000));
 	while (true) {
 		gameBoard = Board();
 		initGameSettings(settings);
