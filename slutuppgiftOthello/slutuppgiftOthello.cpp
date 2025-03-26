@@ -253,14 +253,14 @@ GameCoordinates getValidPlayerInput(Board & board, GameSettings settings, std::v
 		if (invalidInput || finalInput.isInValid()) {
 			invalidInput = true;
 
-			displayBoard(board, settings, movesOverlay); //Skriv ut brädet igen
+			//displayBoard(board, settings, movesOverlay); //Skriv ut brädet igen
 			std::cout << "Inmatning måste vara en koordinat på brädet (ex. f2)\n";
 		}
 		//om ogiltigt drag (men giltig input i övrigt)
 		else if (!isValidMove(board, finalInput)) {
 			invalidInput = true;
 
-			displayBoard(board, settings, movesOverlay); //Skriv ut brädet igen
+			//displayBoard(board, settings, movesOverlay); //Skriv ut brädet igen
 			std::cout << "Du kan tyvärr inte lägga där\n";
 		}
 	} while (invalidInput); //om ogitlig input, hoppa upp igen
@@ -413,7 +413,8 @@ GameCoordinates chooseComputerMove(Board& board, int computerDifficulty) {
 //[9]
 bool makePlayerMove(Board& board, GameSettings settings) {
 	std::vector<GameCoordinates> possibleMoves = getListOfPossibleMoves(board);
-	displayBoard(board, settings, possibleMoves);
+	//displayBoard(board, settings, possibleMoves);
+	render::updatePossibleMoves(possibleMoves);
 	if (possibleMoves.empty()) {
 		std::cout << "Du har inga möjliga drag, turen går över till nästa spelare\n";
 		board.isBlacksTurn = board.isBlacksTurn ? false : true;
@@ -423,6 +424,7 @@ bool makePlayerMove(Board& board, GameSettings settings) {
 
 	GameCoordinates coords = getValidPlayerInput(board, settings, possibleMoves);
 	placeDisc(board, coords);
+	render::updateBoard();
 	return true;
 }
 
@@ -457,10 +459,40 @@ int main() {
 	render::setSettings(&settings);
 	render::updateBoard();
 	render::updateSettings();
-	std::this_thread::sleep_for(std::chrono::milliseconds(10000));
+	GameCoordinates selected = { 4,4 };
+	while (true) {
+		int keycode = _getch();
+		if (keycode == 224) keycode = _getch(); //vid piltangenttryckning skapas två koder, först 224 sedan koden 
+		
+		switch (keycode)
+		{
+		case 72:  //upppil (eller H)
+		case 119: //w
+			selected.y--;
+			break;
+		case 80:  //nedpil (eller P)
+		case 115: //s
+			selected.y++;
+			break;
+		case 75: //vänsterpil (eller K)
+		case 97: //a
+			selected.x--;
+			break;
+		case 77: //högerpil (eller M)
+		case 100: //d
+			selected.x++;
+			break;
+		default:
+			break;
+		}
+		
+		render::updateSelectedSquare(selected);
+	}
+	//std::this_thread::sleep_for(std::chrono::milliseconds(10000));
 	while (true) {
 		gameBoard = Board();
 		initGameSettings(settings);
+		system("cls");
 		bool player1successful = true, player2successful = true;
 		while (player1successful || player2successful) {
 			player1successful = settings.player1iscomp ? makeComputerMove(gameBoard, settings, settings.comp1Difficulty) : makePlayerMove(gameBoard, settings);

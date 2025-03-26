@@ -10,15 +10,23 @@ using namespace render;
 static const std::string ANSI_BOARD_BG = "\033[48;5;28m", ANSI_DEFAULT = "\033[0m";
 static const int LEFT_PADDING = 2, TOP_PADDING = 1, RIGHT_PADDING = 1, BOTTOM_PADDING = 0, SCOREBOARD_HEIGHT = 2;
 static const std::string NAME_PLAYER_1 = "Svart", NAME_PLAYER_2 = "Vit", NAME_COMPUTER = "AI";
+static const std::string emptySymbol = "  ",
+blackSymbol = "\033[30m X", whiteSymbol = "\033[37m O",
+highlightBlackSymbol = "\033[33m X", highlightWhiteSymbol = "\033[33m O",
+possibleSymbol = "\033[38;5;27m +",
+selectModifier = "\033[47m";
 
 //static std::string mainDisplayState[12]; //index 1-8 för brädet
 static std::string boardDisplayState[8][8];
 static std::string secondaryDisplayState[12]; //allt här kommer renderas till höger om mainDisplayState
 static Board* renderedBoardPtr = nullptr;
 static GameSettings* gameSettingsPtr = nullptr;
+static std::vector<GameCoordinates> possibleMovesBuffer = {};
+static GameCoordinates selectedMove = { -1,-1 };
+static std::string selectedMoveBuffer = "";
 static GameCoordinates lastMove;
 static bool lastMoveVisible = false;
-static std::string splash = "";
+static std::string splashText = "";
 static std::chrono::time_point<std::chrono::system_clock> splashExpiryTime;
 
 
@@ -29,7 +37,7 @@ static void print() {
 	for (int lineIndex = 1; lineIndex < 9; ++lineIndex) {
 		std::cout << std::string(LEFT_PADDING, ' ') + ANSI_BOARD_BG;
 		for (int column = 0; column < 8; ++column) {
-			std::cout << boardDisplayState[lineIndex-1][column];
+			std::cout << boardDisplayState[lineIndex - 1][column];
 		}
 		std::cout << ANSI_DEFAULT + std::string(RIGHT_PADDING, ' ') + secondaryDisplayState[lineIndex] << '\n';
 	}
@@ -38,6 +46,18 @@ static void print() {
 		std::cout << std::string(LEFT_PADDING, ' ') + secondaryDisplayState[lineIndex] << '\n';
 	}
 }
+
+static void updateAnimations()
+{
+	print();
+}
+
+void render::updateScreenAndAnimations() {
+	updateAnimations();
+	print();
+}
+
+
 
 
 void render::init() {
@@ -75,10 +95,10 @@ void render::setSettings(GameSettings* settings)
 void render::setLastMoveVisible(bool visible)
 {
 	lastMoveVisible = visible;
-	updateAnimations();
-	print();
+	updateScreenAndAnimations();
 }
-void render::updateSettings()
+
+void render::updateSettings(bool updateScreen)
 {
 	if (gameSettingsPtr == nullptr) { updateAnimations(); print(); return; }
 	if (gameSettingsPtr->player1iscomp && secondaryDisplayState[SCOREBOARD_HEIGHT].back() != ')') {
@@ -99,17 +119,12 @@ void render::updateSettings()
 				secondaryDisplayState[SCOREBOARD_HEIGHT+1].end(), NAME_COMPUTER.length() + 2, ' ');
 	}
 
-	updateAnimations();
-	print();
+	if (updateScreen) updateScreenAndAnimations();
 }
 
-void render::updateBoard()
+void render::updateBoard(bool updateScreen)
 {
 	if (renderedBoardPtr == nullptr) { updateAnimations(); print(); return; }
-
-	static const std::string emptySymbol = "  ",
-		blackSymbol = "\033[30m X", whiteSymbol = "\033[37m O",
-		highlightBlackSymbol = "\033[33m X", highlightWhiteSymbol = "\033[33m O";
 
 	for (int row = 0; row < 8; ++row) {
 		for (int col = 0; col < 8; ++col) {
@@ -143,38 +158,65 @@ void render::updateBoard()
 		+ std::string(abs( int(NAME_PLAYER_2.length()-NAME_PLAYER_1.length())), ' '); //oavsett vad måste stringen alltid
 	//	vara lika lång. Därför lägger vi till ett antal mellanrum som motsvarar skillnaden mellan namn på spelare 1 och 2
 
-	updateAnimations();
-	print();
+	possibleMovesBuffer.clear(); //Eftersom vi skriver över hela brädet när vi anropar updateBoard()
+	//kommer också alla möjliga drag försvinna, därför rensar vi buffern.
+
+	if (updateScreen) updateScreenAndAnimations();
 }
 
 //försvinner vid ändring av brädet //TODO ADD ANIMATIONS
-void render::updatePossibleMoves(std::vector<GameCoordinates> moves)
+void render::updatePossibleMoves(std::vector<GameCoordinates> moves, bool updateScreen)
 {
-	static const std::string possibleSymbol = "\033[38;5;27m +";
+	for (GameCoordinates coords : possibleMovesBuffer) 
+		boardDisplayState[coords.y][coords.x] = emptySymbol;
+	for (GameCoordinates coords : moves)
+		boardDisplayState[coords.y][coords.x] = possibleSymbol;
 
+	if (updateScreen) updateScreenAndAnimations();
 }
-void render::updateAnimations()
-{
-}
+
+
 
 void render::updateSelectedSquare(GameCoordinates square)
 {
+	//återställ rutan som förut var markerad
+	if (!selectedMoveBuffer.empty()) boardDisplayState[selectedMove.y][selectedMove.x] = selectedMoveBuffer;
+	if (square.isInValid()) {
+		selectedMoveBuffer = "";
+	}
+	else {
+		selectedMove = square;
+		selectedMoveBuffer = boardDisplayState[selectedMove.y][selectedMove.x];
+		boardDisplayState[selectedMove.y][selectedMove.x] = selectModifier + selectedMoveBuffer + ANSI_DEFAULT + ANSI_BOARD_BG;
+	}
+	updateScreenAndAnimations();
 }
 
-void render::updateLastMove(GameCoordinates move)
-{
+//bör kallas efter updateBoard() eftersom den funktionen rensar brädet
+void render::updateLastMove(GameCoordinates move, bool updateScreen)
+{	
+	if (lastMoveVisible) {
+		//om det är svarts tur nu, så var det förra draget vit
+		boardDisplayState[lastMove.y][lastMove.x] = renderedBoardPtr->isBlacksTurn ? highlightWhiteSymbol : highlightBlackSymbol;
+	}
+	lastMove = move;
+
+	if (updateScreen) updateScreenAndAnimations();
 }
 
 
 
 void render::updateDebugText(std::string text)
 {
+	updateScreenAndAnimations();
 }
 
 void render::updateComputerProgress(ComputerProgress progress)
 {
+	updateScreenAndAnimations();
 }
 
 void render::splashText(std::string, int durationMs, bool halt)
 {
+	updateScreenAndAnimations();
 }
