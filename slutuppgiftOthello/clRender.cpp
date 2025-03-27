@@ -49,7 +49,7 @@ static void print() {
 
 static void updateAnimations()
 {
-	print();
+	
 }
 
 void render::updateScreenAndAnimations() {
@@ -146,10 +146,10 @@ void render::updateBoard(bool updateScreen)
 		}
 	}
 
-	std::string tPlayerInfo = secondaryDisplayState[SCOREBOARD_HEIGHT].substr(secondaryDisplayState[SCOREBOARD_HEIGHT][1] == ' ' ? 1 : 0);
+	std::string tPlayerInfo = secondaryDisplayState[SCOREBOARD_HEIGHT].substr(secondaryDisplayState[SCOREBOARD_HEIGHT][1] == ' ' ? 1 : 2);
 	secondaryDisplayState[SCOREBOARD_HEIGHT] = std::to_string(renderedBoardPtr->numberOfDiscs[0]) + tPlayerInfo;
 
-	tPlayerInfo = secondaryDisplayState[SCOREBOARD_HEIGHT+1].substr(secondaryDisplayState[SCOREBOARD_HEIGHT][1] == ' ' ? 1 : 0);
+	tPlayerInfo = secondaryDisplayState[SCOREBOARD_HEIGHT+1].substr(secondaryDisplayState[SCOREBOARD_HEIGHT+1][1] == ' ' ? 1 : 2);
 	secondaryDisplayState[SCOREBOARD_HEIGHT+1] = std::to_string(renderedBoardPtr->numberOfDiscs[1]) + tPlayerInfo;
 
 	secondaryDisplayState[SCOREBOARD_HEIGHT + 3] = '*'  
@@ -171,6 +171,8 @@ void render::updatePossibleMoves(std::vector<GameCoordinates> moves, bool update
 		boardDisplayState[coords.y][coords.x] = emptySymbol;
 	for (GameCoordinates coords : moves)
 		boardDisplayState[coords.y][coords.x] = possibleSymbol;
+
+	possibleMovesBuffer = moves;
 
 	if (updateScreen) updateScreenAndAnimations();
 }

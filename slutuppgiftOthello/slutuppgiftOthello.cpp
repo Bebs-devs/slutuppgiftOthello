@@ -18,6 +18,8 @@ bool isValidMove(Board & board, GameCoordinates move) {
 	char sameColor = board.isBlacksTurn ? 'b' : 'c';
 	char otherColor = board.isBlacksTurn ? 'c' : 'b';
 
+	if (board.discs[move.y][move.x] != 'a') return false;
+
 	//iterera alla riktningar
 	for (int i = 0; i < 8; ++i) {
 		//gå ett steg i riktningen
@@ -216,56 +218,56 @@ void displayBoard(Board& board, GameSettings& settings, std::vector<GameCoordina
 }
 
 //[5]
-GameCoordinates getValidPlayerInput(Board & board, GameSettings settings, std::vector<GameCoordinates> movesOverlay = { {9,9} }) {
-	bool invalidInput; //är inputen "trasig"?
-	std::string inputLine; //spara rå input
+GameCoordinates getValidPlayerInput(Board & board) {
+	bool submit = false;
+	GameCoordinates selection = { 4,4 };
+	GameCoordinates attemptedSelection = selection;
+	render::updateSelectedSquare(selection);
 
-	//del av inputen som är bokstaven respektive siffran
-	char letterIn = 0, numberIn = 0; 
+	while (true) {
+		if (_kbhit()) {
+			int keycode = _getch();
+			if (keycode == 224) keycode = _getch(); //vid piltangenttryckning skapas två koder, först 224 sedan koden 
 
-	GameCoordinates finalInput; //de bearbetade koordinaterna
+			switch (keycode)
+			{
+			case 72:  //upppil (eller H)
+			case 119: //w
+				attemptedSelection.y--;
+				break;
+			case 80:  //nedpil (eller P)
+			case 115: //s
+				attemptedSelection.y++;
+				break;
+			case 75: //vänsterpil (eller K)
+			case 97: //a
+				attemptedSelection.x--;
+				break;
+			case 77: //högerpil (eller M)
+			case 100: //d
+				attemptedSelection.x++;
+				break;
+			case 13: //enter
+				submit = true;
+				break;
+			default:
+				break;
+			}
 
-	do { //vi ska kolla input minst en gång men fler ifall ogiltig input ges
-		
-		//prompta användaren
-		std::cout << "Skriv \"bokstav siffra\" där du vill lägga:\n";
+			if (attemptedSelection.isInValid()) attemptedSelection = selection;
+			else selection = attemptedSelection;
 
-		letterIn = 0; //måste nollställas för att kunna ta bearbeta input
-		invalidInput = false; //innan vi har input får vi anta att den är giltig
+			if (submit && isValidMove(board, selection)) {
+				render::updateSelectedSquare({ -1,-1 });
+				return selection;
+			}
+			else submit = false;
 
-		std::getline(std::cin, inputLine); //erhåll input i dess råaste form
-		for (char c : inputLine) { //iterera alla chars i inputen
-			if (isspace(c)) continue; //skippa mellanrum
 
-			//om vi inte redan har en bokstav och detta är en bokstav
-			if (letterIn == 0 && isalpha(c)) letterIn = c;
-			//om vi har redan har en bokstav och detta är en siffra
-			else if (letterIn != 0 && isdigit(c)) numberIn = c;
-			//om vi kommer hit är inputen inte giltig
-			else invalidInput = true;
+			render::updateSelectedSquare(selection);
 		}
-		
-		//bearbeta inputen till index-form
-		finalInput.x = tolower(letterIn) - 97; //'a' är 97
-		finalInput.y = numberIn - 49; //'1' är 49 index börjar på 0
-		
-		//om ogiltig input eller koordinater utanför spelplanen
-		if (invalidInput || finalInput.isInValid()) {
-			invalidInput = true;
-
-			//displayBoard(board, settings, movesOverlay); //Skriv ut brädet igen
-			std::cout << "Inmatning måste vara en koordinat på brädet (ex. f2)\n";
-		}
-		//om ogiltigt drag (men giltig input i övrigt)
-		else if (!isValidMove(board, finalInput)) {
-			invalidInput = true;
-
-			//displayBoard(board, settings, movesOverlay); //Skriv ut brädet igen
-			std::cout << "Du kan tyvärr inte lägga där\n";
-		}
-	} while (invalidInput); //om ogitlig input, hoppa upp igen
-
-	return finalInput; //returnera bearbetade, gilitga koordinater.
+		render::updateScreenAndAnimations();
+	}
 }
 
 //[6.1]
@@ -413,8 +415,8 @@ GameCoordinates chooseComputerMove(Board& board, int computerDifficulty) {
 //[9]
 bool makePlayerMove(Board& board, GameSettings settings) {
 	std::vector<GameCoordinates> possibleMoves = getListOfPossibleMoves(board);
-	//displayBoard(board, settings, possibleMoves);
 	render::updatePossibleMoves(possibleMoves);
+
 	if (possibleMoves.empty()) {
 		std::cout << "Du har inga möjliga drag, turen går över till nästa spelare\n";
 		board.isBlacksTurn = board.isBlacksTurn ? false : true;
@@ -422,8 +424,7 @@ bool makePlayerMove(Board& board, GameSettings settings) {
 		return false;
 	}
 
-	GameCoordinates coords = getValidPlayerInput(board, settings, possibleMoves);
-	placeDisc(board, coords);
+	placeDisc(board, getValidPlayerInput(board));
 	render::updateBoard();
 	return true;
 }
@@ -459,35 +460,7 @@ int main() {
 	render::setSettings(&settings);
 	render::updateBoard();
 	render::updateSettings();
-	GameCoordinates selected = { 4,4 };
-	while (true) {
-		int keycode = _getch();
-		if (keycode == 224) keycode = _getch(); //vid piltangenttryckning skapas två koder, först 224 sedan koden 
-		
-		switch (keycode)
-		{
-		case 72:  //upppil (eller H)
-		case 119: //w
-			selected.y--;
-			break;
-		case 80:  //nedpil (eller P)
-		case 115: //s
-			selected.y++;
-			break;
-		case 75: //vänsterpil (eller K)
-		case 97: //a
-			selected.x--;
-			break;
-		case 77: //högerpil (eller M)
-		case 100: //d
-			selected.x++;
-			break;
-		default:
-			break;
-		}
-		
-		render::updateSelectedSquare(selected);
-	}
+	
 	//std::this_thread::sleep_for(std::chrono::milliseconds(10000));
 	while (true) {
 		gameBoard = Board();
