@@ -250,6 +250,9 @@ GameCoordinates getValidPlayerInput(Board & board) {
 			case 13: //enter
 				submit = true;
 				break;
+			case 114: //r
+				render::restoreScreen();
+				break;
 			default:
 				break;
 			}
@@ -424,8 +427,11 @@ bool makePlayerMove(Board& board, GameSettings settings) {
 		return false;
 	}
 
-	placeDisc(board, getValidPlayerInput(board));
-	render::updateBoard();
+	GameCoordinates move = getValidPlayerInput(board);
+	placeDisc(board, move);
+	render::updateDebugText(std::to_string(move.y) + " " + std::to_string(move.x));
+	render::updateBoard(false);
+	render::updateLastMove(move);
 	return true;
 }
 
@@ -451,21 +457,22 @@ bool makeComputerMove(Board& board, GameSettings settings, int difficulty = 0) {
 
 
 int main() {
-	srand(time(0));
+	srand((int)time(0));
 	setlocale(LC_ALL, "sv_SE");
 	Board gameBoard;
 	GameSettings settings;
 	render::init();
 	render::setBoard(&gameBoard);
 	render::setSettings(&settings);
-	render::updateBoard();
-	render::updateSettings();
+	
 	
 	//std::this_thread::sleep_for(std::chrono::milliseconds(10000));
 	while (true) {
 		gameBoard = Board();
 		initGameSettings(settings);
 		system("cls");
+		render::updateBoard();
+		render::updateSettings();
 		bool player1successful = true, player2successful = true;
 		while (player1successful || player2successful) {
 			player1successful = settings.player1iscomp ? makeComputerMove(gameBoard, settings, settings.comp1Difficulty) : makePlayerMove(gameBoard, settings);

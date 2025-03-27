@@ -14,7 +14,7 @@ static const std::string emptySymbol = "  ",
 blackSymbol = "\033[30m X", whiteSymbol = "\033[37m O",
 highlightBlackSymbol = "\033[33m X", highlightWhiteSymbol = "\033[33m O",
 possibleSymbol = "\033[38;5;27m +",
-selectModifier = "\033[47m";
+selectModifier = "\033[48;5;246m";
 
 //static std::string mainDisplayState[12]; //index 1-8 för brädet
 static std::string boardDisplayState[8][8];
@@ -24,9 +24,8 @@ static GameSettings* gameSettingsPtr = nullptr;
 static std::vector<GameCoordinates> possibleMovesBuffer = {};
 static GameCoordinates selectedMove = { -1,-1 };
 static std::string selectedMoveBuffer = "";
-static GameCoordinates lastMove;
-static bool lastMoveVisible = false;
-static std::string splashText = "";
+static std::string splashText1 = "TJEO", splashText2 = "";
+static int splash1LeftMargin = 2, splash2RightMargin = 3;
 static std::chrono::time_point<std::chrono::system_clock> splashExpiryTime;
 
 
@@ -35,9 +34,20 @@ static void print() {
 	std::cout << std::string(TOP_PADDING, '\n'); //genererar string med längd TOP_PADDING med alla symboler '\n'
 	std::cout << std::string(LEFT_PADDING, ' ') + secondaryDisplayState[0] << '\n';
 	for (int lineIndex = 1; lineIndex < 9; ++lineIndex) {
+		int splashCharactersWritten = 0;
 		std::cout << std::string(LEFT_PADDING, ' ') + ANSI_BOARD_BG;
 		for (int column = 0; column < 8; ++column) {
+			if (lineIndex == 4 && 2*column >= splash1LeftMargin && 2*column < splash1LeftMargin + splashText1.length()) {
+				std::cout << ANSI_DEFAULT + splashText1[splashCharactersWritten] + splashText1[splashCharactersWritten+1];
+				splashCharactersWritten += 2;
+				continue;
+			}
 			std::cout << boardDisplayState[lineIndex - 1][column];
+
+		}
+		if (lineIndex == 4 && splashCharactersWritten < splashText1.length()) { 
+			std::cout << splashText1.substr(splashCharactersWritten) + ANSI_DEFAULT + "\n";
+			continue;
 		}
 		std::cout << ANSI_DEFAULT + std::string(RIGHT_PADDING, ' ') + secondaryDisplayState[lineIndex] << '\n';
 	}
@@ -45,6 +55,7 @@ static void print() {
 	for (int lineIndex = 9; lineIndex < 12; ++lineIndex) {
 		std::cout << std::string(LEFT_PADDING, ' ') + secondaryDisplayState[lineIndex] << '\n';
 	}
+
 }
 
 static void updateAnimations()
@@ -56,9 +67,6 @@ void render::updateScreenAndAnimations() {
 	updateAnimations();
 	print();
 }
-
-
-
 
 void render::init() {
 	std::cout << "\033[?25l"; //göm skriv-markören
@@ -77,10 +85,7 @@ void render::init() {
 	secondaryDisplayState[9] = "Funkart";
 	secondaryDisplayState[10] = "[---------     ]";
 	secondaryDisplayState[11] = "123/13948";
-	print();
 }
-
-
 
 void render::setBoard(Board* board)
 {
@@ -90,12 +95,6 @@ void render::setBoard(Board* board)
 void render::setSettings(GameSettings* settings)
 {
 	gameSettingsPtr = settings;
-}
-
-void render::setLastMoveVisible(bool visible)
-{
-	lastMoveVisible = visible;
-	updateScreenAndAnimations();
 }
 
 void render::updateSettings(bool updateScreen)
@@ -197,11 +196,10 @@ void render::updateSelectedSquare(GameCoordinates square)
 //bör kallas efter updateBoard() eftersom den funktionen rensar brädet
 void render::updateLastMove(GameCoordinates move, bool updateScreen)
 {	
-	if (lastMoveVisible) {
-		//om det är svarts tur nu, så var det förra draget vit
-		boardDisplayState[lastMove.y][lastMove.x] = renderedBoardPtr->isBlacksTurn ? highlightWhiteSymbol : highlightBlackSymbol;
-	}
-	lastMove = move;
+	
+	//om det är svarts tur nu, så var det förra draget vit
+	boardDisplayState[move.y][move.x] = renderedBoardPtr->isBlacksTurn ? highlightWhiteSymbol : highlightBlackSymbol;
+	
 
 	if (updateScreen) updateScreenAndAnimations();
 }
@@ -210,6 +208,10 @@ void render::updateLastMove(GameCoordinates move, bool updateScreen)
 
 void render::updateDebugText(std::string text)
 {
+	int differenceOldNewLength = secondaryDisplayState[9].length() - text.length();
+	secondaryDisplayState[9] = text;
+	if (differenceOldNewLength > 0) secondaryDisplayState[9] += std::string(differenceOldNewLength, ' ');
+
 	updateScreenAndAnimations();
 }
 
@@ -218,7 +220,15 @@ void render::updateComputerProgress(ComputerProgress progress)
 	updateScreenAndAnimations();
 }
 
-void render::splashText(std::string, int durationMs, bool halt)
+void render::splashText(std::string, int durationMs, bool returnWhenFinished)
 {
+
+	updateScreenAndAnimations();
+}
+
+void render::restoreScreen()
+{
+	system("cls");
+	std::cout << "\033[?25l"; //göm skriv-markören
 	updateScreenAndAnimations();
 }
