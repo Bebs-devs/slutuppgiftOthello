@@ -16,7 +16,6 @@ highlightBlackSymbol = "\033[33m X", highlightWhiteSymbol = "\033[33m O",
 possibleSymbol = "\033[38;5;27m +",
 selectModifier = "\033[48;5;246m";
 
-//static std::string mainDisplayState[12]; //index 1-8 för brädet
 static std::string boardDisplayState[8][8];
 static std::string secondaryDisplayState[12]; //allt här kommer renderas till höger om mainDisplayState
 static Board* renderedBoardPtr = nullptr;
@@ -24,12 +23,36 @@ static GameSettings* gameSettingsPtr = nullptr;
 static std::vector<GameCoordinates> possibleMovesBuffer = {};
 static GameCoordinates selectedMove = { -1,-1 };
 static std::string selectedMoveBuffer = "";
-static std::string splashText1 = "TJEO", splashText2 = "";
-static int splash1LeftMargin = 2, splash2RightMargin = 3;
+static std::string splashTextStr = "";
+static std::string splashTextStyle = ANSI_DEFAULT;
+static int splashLeftMargin = 7;
 static std::chrono::time_point<std::chrono::system_clock> splashExpiryTime;
 
+//returnerar true om text har skrivits ut
+//ändrar column-variabeln till sista kolumnen utskrift har skett
+static bool printSplashText(int & column){
+	if (splashTextStr.empty()) return false;
+	std::string tempSplashTextStr = splashTextStr;
+	//Index  0 1 2 3 4 5 6 7 8 9 ...
+	//Kolumn  0   1   2   3   4 
+	//Margin 1 2 3 4 5 ...
+	//om första index i nästa kolumn är mer än margin
+	if (2 * (column + 1) > splashLeftMargin) {
+		//om margin är udda, lägg till en tom karaktär i början som padding
+		//anledning till temp-variabel är så vi inte lägger till padding
+		//till den faktiska text-variabeln
+		if (splashLeftMargin % 2) tempSplashTextStr = ' ' + tempSplashTextStr;
+		if (tempSplashTextStr.length() % 2) tempSplashTextStr += ' ';
+		
+		std::cout << splashTextStyle + tempSplashTextStr + ANSI_BOARD_BG;
+		column += (tempSplashTextStr.length()-1) / 2;
+		return true;
+	}
+	return false;
+}
 
 static void print() {
+	bool splashTextWritten = false;
 	std::cout << "\033[H"; //gå till "hem-positionen"
 	std::cout << std::string(TOP_PADDING, '\n'); //genererar string med längd TOP_PADDING med alla symboler '\n'
 	std::cout << std::string(LEFT_PADDING, ' ') + secondaryDisplayState[0] << '\n';
@@ -37,18 +60,14 @@ static void print() {
 		int splashCharactersWritten = 0;
 		std::cout << std::string(LEFT_PADDING, ' ') + ANSI_BOARD_BG;
 		for (int column = 0; column < 8; ++column) {
-			if (lineIndex == 4 && 2*column >= splash1LeftMargin && 2*column < splash1LeftMargin + splashText1.length()) {
-				std::cout << ANSI_DEFAULT + splashText1[splashCharactersWritten] + splashText1[splashCharactersWritten+1];
-				splashCharactersWritten += 2;
+			if (lineIndex == 4 && !splashTextWritten && printSplashText(column)) {
+				splashTextWritten = true;
 				continue;
 			}
 			std::cout << boardDisplayState[lineIndex - 1][column];
 
 		}
-		if (lineIndex == 4 && splashCharactersWritten < splashText1.length()) { 
-			std::cout << splashText1.substr(splashCharactersWritten) + ANSI_DEFAULT + "\n";
-			continue;
-		}
+		
 		std::cout << ANSI_DEFAULT + std::string(RIGHT_PADDING, ' ') + secondaryDisplayState[lineIndex] << '\n';
 	}
 	std::cout << std::string(BOTTOM_PADDING, '\n');
@@ -60,7 +79,7 @@ static void print() {
 
 static void updateAnimations()
 {
-	
+	//if (std::chrono::duration_cast<std::chrono::milliseconds>(splashExpiryTime - std::chrono::system_clock::now()) < 0)
 }
 
 void render::updateScreenAndAnimations() {
@@ -176,8 +195,6 @@ void render::updatePossibleMoves(std::vector<GameCoordinates> moves, bool update
 	if (updateScreen) updateScreenAndAnimations();
 }
 
-
-
 void render::updateSelectedSquare(GameCoordinates square)
 {
 	//återställ rutan som förut var markerad
@@ -204,8 +221,6 @@ void render::updateLastMove(GameCoordinates move, bool updateScreen)
 	if (updateScreen) updateScreenAndAnimations();
 }
 
-
-
 void render::updateDebugText(std::string text)
 {
 	int differenceOldNewLength = secondaryDisplayState[9].length() - text.length();
@@ -220,9 +235,12 @@ void render::updateComputerProgress(ComputerProgress progress)
 	updateScreenAndAnimations();
 }
 
-void render::splashText(std::string, int durationMs, bool returnWhenFinished)
+void render::splashText(std::string text, int durationMs, bool returnWhenFinished)
 {
-
+	splashTextStr = text;
+	if (splashTextStr.length() < 16) splashLeftMargin = (16 - splashTextStr.length()) / 2;
+	else splashLeftMargin = 0;
+	splashExpiryTime = std::chrono::system_clock::now() + std::chrono::duration<int, std::chrono::milliseconds>(durationMs);
 	updateScreenAndAnimations();
 }
 
