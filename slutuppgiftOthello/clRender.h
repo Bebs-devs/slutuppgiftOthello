@@ -14,7 +14,7 @@ namespace render {
 	void updateScreenAndAnimations();
 	void updateSelectedSquare(GameCoordinates square);
 	void updateLastMove(GameCoordinates move, bool updateScreen = true);
-	void updateDebugText(std::string text);
+	void updateDebugText(std::string text, bool updateScreen = true);
 	void updateComputerProgress(ComputerProgress progress);
 	void splashText(std::string text, int durationMs = 2000, bool returnWhenFinished = false);
 	void restoreScreen();

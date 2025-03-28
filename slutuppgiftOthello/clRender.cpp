@@ -7,7 +7,7 @@
 
 using namespace render;
 
-static const std::string ANSI_BOARD_BG = "\033[48;5;28m", ANSI_DEFAULT = "\033[0m";
+static const std::string ANSI_BOARD_BG = "\033[48;2;24;140;27m", ANSI_DEFAULT = "\033[0m";
 static const int LEFT_PADDING = 2, TOP_PADDING = 1, RIGHT_PADDING = 1, BOTTOM_PADDING = 0, SCOREBOARD_HEIGHT = 2;
 static const std::string NAME_PLAYER_1 = "Svart", NAME_PLAYER_2 = "Vit", NAME_COMPUTER = "AI";
 static const std::string emptySymbol = "  ",
@@ -24,7 +24,7 @@ static std::vector<GameCoordinates> possibleMovesBuffer = {};
 static GameCoordinates selectedMove = { -1,-1 };
 static std::string selectedMoveBuffer = "";
 static std::string splashTextStr = "";
-static std::string splashTextStyle = ANSI_DEFAULT;
+static std::string splashTextStyle = "\033[38;2;255;255;255m\033[48;2;0;0;0m";
 static int splashLeftMargin = 7;
 static std::chrono::time_point<std::chrono::system_clock> splashExpiryTime;
 
@@ -77,9 +77,63 @@ static void print() {
 
 }
 
+static std::string interpolateColor(std::string startColorAnsi, std::string endColorAnsi, float pointBetween) {
+	//input måste vara antingen i format "\033[48;2;X;X;Xm eller "\033[38;2;X;X;Xm" där X är heltal mellan 0 och 255
+	std::string beginningCode = startColorAnsi.substr(0,7);
+	std::string remainingCode = startColorAnsi.substr(7);
+	int nextSeperatorIndex = remainingCode.find(';');
+	int startRed = std::stoi(remainingCode.substr(0, nextSeperatorIndex));
+	remainingCode = remainingCode.substr(nextSeperatorIndex+1);
+
+	nextSeperatorIndex = remainingCode.find(';');
+	int startGreen = std::stoi(remainingCode.substr(0, nextSeperatorIndex));
+	remainingCode = remainingCode.substr(nextSeperatorIndex+1);
+
+	nextSeperatorIndex = remainingCode.find('m');
+	int startBlue = std::stoi(remainingCode.substr(0, nextSeperatorIndex));
+	remainingCode = remainingCode.substr(nextSeperatorIndex+1);
+
+	remainingCode = endColorAnsi.substr(7);
+	nextSeperatorIndex = remainingCode.find(';');
+	int endRed = std::stoi(remainingCode.substr(0, nextSeperatorIndex));
+	remainingCode = remainingCode.substr(nextSeperatorIndex+1);
+
+	nextSeperatorIndex = remainingCode.find(';');
+	int endGreen = std::stoi(remainingCode.substr(0, nextSeperatorIndex));
+	remainingCode = remainingCode.substr(nextSeperatorIndex+1);
+
+	nextSeperatorIndex = remainingCode.find('m');
+	int endBlue = std::stoi(remainingCode.substr(0, nextSeperatorIndex));
+	remainingCode = remainingCode.substr(nextSeperatorIndex+1);
+
+	int red = startRed + (endRed - startRed) * pointBetween;
+	int green = startGreen + (endGreen - startGreen) * pointBetween;
+	int blue = startBlue + (endBlue - startBlue) * pointBetween;
+	std::string finalResult = beginningCode + std::to_string(red) + ';' + std::to_string(green) + ';' + std::to_string(blue) + 'm';
+	//updateDebugText(finalResult.substr(1), false);
+	return finalResult;
+}
+
 static void updateAnimations()
 {
-	//if (std::chrono::duration_cast<std::chrono::milliseconds>(splashExpiryTime - std::chrono::system_clock::now()) < 0)
+	
+	
+	using namespace std::chrono;
+	const milliseconds splashAnimationSpeed = milliseconds(100);
+	milliseconds timeToSplashExpiry = duration_cast<milliseconds>(splashExpiryTime - system_clock::now());
+	int allowedSplashLength = timeToSplashExpiry / splashAnimationSpeed;
+	if (timeToSplashExpiry < milliseconds(0)) {
+		splashTextStr = "";
+	}
+	else if (splashTextStr.length() > allowedSplashLength) {
+		splashLeftMargin++;
+		splashTextStr = splashTextStr.substr(1,splashTextStr.length()-2);
+	}
+	if (timeToSplashExpiry < milliseconds(2000) && timeToSplashExpiry >= milliseconds(0)) {
+		updateDebugText(std::to_string((timeToSplashExpiry/milliseconds(20))/100.0f), false);
+		splashTextStyle = interpolateColor("\033[38;2;0;0;0", "\033[38;2;255;255;255m", ((timeToSplashExpiry / milliseconds(20)) / 100.0f));
+	}
+	
 }
 
 void render::updateScreenAndAnimations() {
@@ -221,12 +275,13 @@ void render::updateLastMove(GameCoordinates move, bool updateScreen)
 	if (updateScreen) updateScreenAndAnimations();
 }
 
-void render::updateDebugText(std::string text)
+void render::updateDebugText(std::string text, bool updateScreen)
 {
 	int differenceOldNewLength = secondaryDisplayState[9].length() - text.length();
 	secondaryDisplayState[9] = text;
 	if (differenceOldNewLength > 0) secondaryDisplayState[9] += std::string(differenceOldNewLength, ' ');
 
+	if (updateScreen)
 	updateScreenAndAnimations();
 }
 
@@ -240,7 +295,7 @@ void render::splashText(std::string text, int durationMs, bool returnWhenFinishe
 	splashTextStr = text;
 	if (splashTextStr.length() < 16) splashLeftMargin = (16 - splashTextStr.length()) / 2;
 	else splashLeftMargin = 0;
-	splashExpiryTime = std::chrono::system_clock::now() + std::chrono::duration<int, std::chrono::milliseconds>(durationMs);
+	splashExpiryTime = std::chrono::system_clock::now() + std::chrono::milliseconds(durationMs);
 	updateScreenAndAnimations();
 }
 

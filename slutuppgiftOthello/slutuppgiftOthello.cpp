@@ -248,6 +248,7 @@ GameCoordinates getValidPlayerInput(Board & board) {
 				attemptedSelection.x++;
 				break;
 			case 13: //enter
+			case 32: //space
 				submit = true;
 				break;
 			case 114: //r
@@ -286,7 +287,8 @@ int simpleSelectionChoice(std::string header, std::vector<std::string> options) 
 			else std::cout << "  " << options[i] << "           \n";
 		}
 		keyPress = _getch();
-		if (keyPress == 13) break;
+		//om enter eller space
+		if (keyPress == 13 || keyPress == 32) break;
 		if (keyPress != 224) continue;
 
 		keyPress = _getch();
@@ -465,7 +467,6 @@ int main() {
 	render::setBoard(&gameBoard);
 	render::setSettings(&settings);
 	
-	
 	//std::this_thread::sleep_for(std::chrono::milliseconds(10000));
 	while (true) {
 		gameBoard = Board();
@@ -473,6 +474,7 @@ int main() {
 		system("cls");
 		render::updateBoard();
 		render::updateSettings();
+		render::splashText("sybau ts pmo", 4344);
 		bool player1successful = true, player2successful = true;
 		while (player1successful || player2successful) {
 			player1successful = settings.player1iscomp ? makeComputerMove(gameBoard, settings, settings.comp1Difficulty) : makePlayerMove(gameBoard, settings);
