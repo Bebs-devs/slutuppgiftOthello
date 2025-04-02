@@ -7,7 +7,8 @@
 
 using namespace render;
 
-static const std::string ANSI_BOARD_BG = "\033[48;2;24;140;27m", ANSI_DEFAULT = "\033[0m";
+static const std::string ANSI_BOARD_BG = "\033[48;2;24;140;27m", ANSI_DEFAULT = "\033[0m", 
+RGB_WHITE_FG = "\033[38;2;255;255;255m", RGB_BLACK_FG = "\033[38;2;0;0;0m", RGB_BLACK_BG = "\033[48;2;0;0;0m";
 static const int LEFT_PADDING = 2, TOP_PADDING = 1, RIGHT_PADDING = 1, BOTTOM_PADDING = 0, SCOREBOARD_HEIGHT = 2;
 static const std::string NAME_PLAYER_1 = "Svart", NAME_PLAYER_2 = "Vit", NAME_COMPUTER = "AI";
 static const std::string emptySymbol = "  ",
@@ -16,6 +17,7 @@ highlightBlackSymbol = "\033[33m X", highlightWhiteSymbol = "\033[33m O",
 possibleSymbol = "\033[38;5;27m +",
 selectModifier = "\033[48;5;246m";
 
+static std::chrono::time_point<std::chrono::system_clock> lastFrameUpdate;
 static std::string boardDisplayState[8][8];
 static std::string secondaryDisplayState[12]; //allt här kommer renderas till höger om mainDisplayState
 static Board* renderedBoardPtr = nullptr;
@@ -46,6 +48,7 @@ static bool printSplashText(int & column){
 		
 		std::cout << splashTextStyle + tempSplashTextStr + ANSI_BOARD_BG;
 		column += (tempSplashTextStr.length()-1) / 2;
+		updateDebugText(tempSplashTextStr, false);
 		return true;
 	}
 	return false;
@@ -75,6 +78,9 @@ static void print() {
 		std::cout << std::string(LEFT_PADDING, ' ') + secondaryDisplayState[lineIndex] << '\n';
 	}
 
+	std::chrono::time_point<std::chrono::system_clock> tLastFrameUpdate = lastFrameUpdate;
+	lastFrameUpdate = std::chrono::system_clock::now();
+	updateDebugText(std::to_string(std::chrono::duration_cast<std::chrono::milliseconds>(lastFrameUpdate - tLastFrameUpdate).count()), false);
 }
 
 static std::string interpolateColor(std::string startColorAnsi, std::string endColorAnsi, float pointBetween) {
@@ -117,21 +123,23 @@ static std::string interpolateColor(std::string startColorAnsi, std::string endC
 static void updateAnimations()
 {
 	
-	
 	using namespace std::chrono;
-	const milliseconds splashAnimationSpeed = milliseconds(100);
+	const milliseconds splashTextSpeed = milliseconds(30), splashColorSpeed = milliseconds(300);
 	milliseconds timeToSplashExpiry = duration_cast<milliseconds>(splashExpiryTime - system_clock::now());
-	int allowedSplashLength = timeToSplashExpiry / splashAnimationSpeed;
+	int allowedSplashLength = timeToSplashExpiry / splashTextSpeed;
 	if (timeToSplashExpiry < milliseconds(0)) {
 		splashTextStr = "";
 	}
 	else if (splashTextStr.length() > allowedSplashLength) {
+		updateDebugText("adjusted lenght", false);
 		splashLeftMargin++;
 		splashTextStr = splashTextStr.substr(1,splashTextStr.length()-2);
 	}
-	if (timeToSplashExpiry < milliseconds(2000) && timeToSplashExpiry >= milliseconds(0)) {
-		updateDebugText(std::to_string((timeToSplashExpiry/milliseconds(20))/100.0f), false);
-		splashTextStyle = interpolateColor("\033[38;2;0;0;0", "\033[38;2;255;255;255m", ((timeToSplashExpiry / milliseconds(20)) / 100.0f));
+	if (timeToSplashExpiry < splashColorSpeed && timeToSplashExpiry >= milliseconds(0)) {
+		
+		float colorProgress = 1.0f - timeToSplashExpiry.count() / (float)splashColorSpeed.count();
+		updateDebugText(std::to_string(colorProgress), false);
+		splashTextStyle = interpolateColor(RGB_WHITE_FG, ANSI_BOARD_BG, colorProgress) + interpolateColor(RGB_BLACK_BG, ANSI_BOARD_BG, colorProgress);
 	}
 	
 }
@@ -142,6 +150,7 @@ void render::updateScreenAndAnimations() {
 }
 
 void render::init() {
+	
 	std::cout << "\033[?25l"; //göm skriv-markören
 	secondaryDisplayState[0] = " O T H E L L O";
 	for (int lineIndex = 1; lineIndex <= 8; ++lineIndex) {
@@ -158,6 +167,7 @@ void render::init() {
 	secondaryDisplayState[9] = "Funkart";
 	secondaryDisplayState[10] = "[---------     ]";
 	secondaryDisplayState[11] = "123/13948";
+	lastFrameUpdate = std::chrono::system_clock::now();
 }
 
 void render::setBoard(Board* board)
@@ -292,11 +302,20 @@ void render::updateComputerProgress(ComputerProgress progress)
 
 void render::splashText(std::string text, int durationMs, bool returnWhenFinished)
 {
+	using namespace std::chrono;
+
+	splashTextStyle = RGB_WHITE_FG + RGB_BLACK_BG;
 	splashTextStr = text;
 	if (splashTextStr.length() < 16) splashLeftMargin = (16 - splashTextStr.length()) / 2;
 	else splashLeftMargin = 0;
 	splashExpiryTime = std::chrono::system_clock::now() + std::chrono::milliseconds(durationMs);
 	updateScreenAndAnimations();
+
+	if (returnWhenFinished) {
+		while (duration_cast<milliseconds>(splashExpiryTime - system_clock::now()) > milliseconds(0)) {
+			updateScreenAndAnimations();
+		}
+	}
 }
 
 void render::restoreScreen()

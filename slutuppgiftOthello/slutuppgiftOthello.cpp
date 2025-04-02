@@ -385,8 +385,7 @@ int minMax(Board& board,int depth){
 }
 
 //[8]
-GameCoordinates chooseComputerMove(Board& board, int computerDifficulty) {
-	std::vector<GameCoordinates> possibleMoves = getListOfPossibleMoves(board);
+GameCoordinates chooseComputerMove(Board& board, int computerDifficulty, std::vector<GameCoordinates> possibleMoves) {
 	int searchDepth = computerDifficulty, bestIndex = -1;
 
 	if (board.isBlacksTurn) {
@@ -423,9 +422,9 @@ bool makePlayerMove(Board& board, GameSettings settings) {
 	render::updatePossibleMoves(possibleMoves);
 
 	if (possibleMoves.empty()) {
-		std::cout << "Du har inga möjliga drag, turen går över till nästa spelare\n";
+
 		board.isBlacksTurn = board.isBlacksTurn ? false : true;
-		std::this_thread::sleep_for(std::chrono::seconds(1));
+		render::splashText("Spelare har inga möjliga drag", 1500, true);
 		return false;
 	}
 
@@ -441,19 +440,15 @@ bool makeComputerMove(Board& board, GameSettings settings, int difficulty = 0) {
 	std::vector<GameCoordinates> possibleMoves = getListOfPossibleMoves(board);
 	
 	if (possibleMoves.empty()) {
-		std::cout << "Du har inga möjliga drag, turen går över till nästa spelare\n";
 		board.isBlacksTurn = board.isBlacksTurn ? false : true;
-		std::this_thread::sleep_for(std::chrono::milliseconds(10));
+		render::splashText("Ai har inga möjliga drag", 1500, true);
 		return false;
 	}
 	
-	int moveIndex = rand() % possibleMoves.size();
-	GameCoordinates coords = possibleMoves[moveIndex];
-	placeDisc(board, chooseComputerMove(board,difficulty));
-	//possibleMoves.erase(possibleMoves.begin() + moveIndex);
-	std::cout << "Lade: " << char(coords.x+97) << " " << coords.y+1;
-	displayBoard(board, settings, {}, {coords});
-	std::this_thread::sleep_for(std::chrono::milliseconds(10));
+	GameCoordinates chosenMove = chooseComputerMove(board, difficulty, possibleMoves);
+	placeDisc(board, chosenMove);
+	render::updateBoard(false);
+	render::updateLastMove(chosenMove);
 	return true;
 }
 
@@ -474,7 +469,6 @@ int main() {
 		system("cls");
 		render::updateBoard();
 		render::updateSettings();
-		render::splashText("sybau ts pmo", 4344);
 		bool player1successful = true, player2successful = true;
 		while (player1successful || player2successful) {
 			player1successful = settings.player1iscomp ? makeComputerMove(gameBoard, settings, settings.comp1Difficulty) : makePlayerMove(gameBoard, settings);
