@@ -1,112 +1,137 @@
-﻿#include <iostream>
-#include <conio.h>
-#include <locale>
-#include <vector>
-#include <string>
+﻿
+//Copyright Hugo TD 2025
+
+#include <iostream> //cin cout
+#include <conio.h> //getch kbhit
+#include <locale> //utskrift av åäö
+#include <vector> //std::vector
+#include <string> //std::string
 #include <cctype> //för isAlpha och isSpace
-#include <chrono>
-#include <thread>
-#include <ctime>
-#include "clRender.h"
-#include "othelloResources.h"
+#include <chrono> //allt med tid
+#include <ctime> //för initialisering av rand
+#include "clRender.h" //funktioner som skriver ut saker på skärmen
+#include "othelloResources.h" //structs och en typedef som används av hela programmet
 
+//[A.a] refererar till planeringen
+//koordinater är i formen {y, x}, där {0, 0} är vänstra översta hörnet
 
-
-//[2.1]
+//[2.1] kollar om ett drag är giltigt på ett specifikt bräde
 bool isValidMove(Board & board, GameCoordinates move) {
-	//relativ färg till färg på det drag som kollas
-	char sameColor = board.isBlacksTurn ? 'b' : 'c';
-	char otherColor = board.isBlacksTurn ? 'c' : 'b';
+	//relativ färg jämfört med vems tur det är
+	char sameColor = board.isBlacksTurn ? 'b' : 'c'; //ex. om det är svarts tur kommer sameColor = 'b' , alltså svart
+	char otherColor = board.isBlacksTurn ? 'c' : 'b'; //tvärtom
 
-	if (board.discs[move.y][move.x] != 'a') return false;
+	//kolla om rutan är ockuperad, isåfall går det ju inte att lägga där
+	if (board.discs[move.y][move.x] != 'a') return false; 
 
-	//iterera alla riktningar
+	//iterera alla riktningar (kardinala riktningar, samt diagonaler)
 	for (int i = 0; i < 8; ++i) {
-		//gå ett steg i riktningen
-		GameCoordinates currCoords = { move.y + GameCoordinates::translations[i][0],
+		//gå ett steg i riktningen. //translations är relative koordinater för varje riktning (ex. {1,0} för ned)
+		GameCoordinates currCoords = { move.y + GameCoordinates::translations[i][0], 
 			move.x + GameCoordinates::translations[i][1] };
 
-		//gå till nästa riktning om vi är utanför spelplanen
+		//hoppa direkt till nästa riktning om vi är utanför spelplanen
 		if (currCoords.isInValid()) continue;
-		//eller om INTE motsatt färg (alltså tom eller samma)
+
+		//hoppa direkt till nästa om INTE motsatt färg (alltså tom eller samma)
+		//detta därför att det krävs en bricka i motsatt färga bredvid där du lägger för att flippa brickor
 		if (board.discs[currCoords.y][currCoords.x] != otherColor) continue;
 
-		/*har vi kommit så här långt har vi en bricka med motsatt färg
-		för att utföra ett drag krävs också en bricka med samma färg i 
+		/*
+		Har vi kommit så här långt har vi en bricka med motsatt färg.
+		För att utföra ett drag krävs också en bricka med samma färg i 
 		slutet av kedjan med brickor i motsatt färg. 
 		*/
 		while (true) {
-			//gå ett steg i riktningen
+			//gå ett till steg i riktningen
 			currCoords = { currCoords.y + GameCoordinates::translations[i][0],
 			currCoords.x + GameCoordinates::translations[i][1] };
 
 			//fortsätt till nästa riktning om vi är utanför spelplanen
 			if (currCoords.isInValid()) break;
-			//eller på en tom ruta
+			//eller på en tom ruta (här tar kedjan slut)
 			if (board.discs[currCoords.y][currCoords.x] == 'a') break;
 			 
-			//hittar vi däremot en bricka med samma färg är draget giltigt
+			//hittar vi däremot en bricka med samma färg är draget giltigt (här tar kedjan slut)
 			if (board.discs[currCoords.y][currCoords.x] == sameColor) return true;
 
-			//om det är motsatt färg fortsätter vi helt enkelt
+			//om det är motsatt färg fortsätter vi i kedjan
 		}
 		
 	}
 	/*om vi har kollat alla riktningar utan att förutsättningarna för
-	ett giltigt drag mötts*/
+	ett giltigt drag mötts, är draget inte giltigt*/
 	return false;
 }
 
-//[2]
+//[2] returnerar en lista över möjliga drag som kan göras på ett visst bräde
 std::vector<GameCoordinates> getListOfPossibleMoves(Board &board) {
-	std::vector<GameCoordinates> listOfPossibleMoves;
+	std::vector<GameCoordinates> listOfPossibleMoves; //skapar en vector som vi sen fyller med möjliga drag
+
+	//iterera genom alla rutor på brädet (8 x 8)
 	for (int y = 0; y < 8; ++y) {
 		for (int x = 0; x < 8; ++x) {
+			//för att ett drag ska vara möjligt, måste rutan ligga direkt intill (inkl. diagonalt) en
+			//bricka. Vi har en två-dimensionell array som håller koll på detta
 			if (!board.adjacents[y][x]) continue;
+			
+			//om rutan ligger intill en bricka, kollar vi om det är ett giltigt drag
+			//är det det, läggs draget till i listan över möjliga drag
 			if (isValidMove(board, { y,x })) listOfPossibleMoves.push_back({ y,x });
 		}
 	}
+	//när vi har gått igenom alla rutor returnerar vi listan över möjliga drag
 	return listOfPossibleMoves;
 }
 
-//[3]
+//[3] placera en bricka på ett bräde, varefter brädet uppdateras
 void placeDisc(Board& board, GameCoordinates coords) {
-	//relativ färg till färg på det drag som kollas
+	//OBS: koden här liknar funktionen isValidMove, därför är kommentarerna här färre.
+	
+	//relativ färg till vems tur det är.
 	char sameColor = board.isBlacksTurn ? 'b' : 'c';
 	char otherColor = board.isBlacksTurn ? 'c' : 'b';
 
+	//ändra status på rutan där brickan placeras
 	board.discs[coords.y][coords.x] = sameColor;
+
+	//lägg till ett på den spelarens räkning över antal brickor
 	board.numberOfDiscs[board.isBlacksTurn ? 0 : 1] += 1;
 
+	//eftersom bricken är ockuperad, räknas den inte som en intilliggande ruta
+	//även fast den tekniskt sett är det. Detta, eftersom adjacents bara bryr sig om tomma rutor
 	board.adjacents[coords.y][coords.x] = false;
+
+	//Nu ändrar vi status på intilliggande rutor, alltså adjacents.
+	//iterera alla riktningar
 	for (int i = 0; i < 8; ++i) {
+		//gå ett steg i riktningen
 		GameCoordinates adjCoords = { coords.y + GameCoordinates::translations[i][0], 
 			coords.x + GameCoordinates::translations[i][1] };
+
+		//hoppa till nästa riktning om vi är utanför spelplanen
 		if (adjCoords.isInValid()) continue;
+
+		//hoppa till nästa riktning om rutan inte är tom
 		if (board.discs[adjCoords.y][adjCoords.x] > 'a') continue;
+
+		//sätt rutans status till intilliggande
 		board.adjacents[adjCoords.y][adjCoords.x] = true;
 	}
 
-	
+	//Nu är det dags att vända på påverkade brickor
 
 	//iterera alla riktningar
 	for (int i = 0; i < 8; ++i) {
+		//håller koll på om en vändning faktiskt ska ske
 		bool flipConfirmed = false;
+		//isåfall, är dessa rutorna som ska vändas
 		std::vector<GameCoordinates> squaresToBeFlipped = {};
-		////gå ett steg i riktningen
-		//GameCoordinates currCoords = { coords.y + GameCoordinates::translations[i][0],
-		//	coords.x + GameCoordinates::translations[i][1] };
-
-		////gå till nästa riktning om vi är utanför spelplanen
-		//if (currCoords.isInValid()) continue;
-		////eller om INTE motsatt färg (alltså tom eller samma)
-		//if (board.discs[currCoords.y][currCoords.x] != otherColor) continue;
-
-		///*har vi kommit så här långt har vi en bricka med motsatt färg
-		//för att utföra ett drag krävs också en bricka med samma färg i
-		//slutet av kedjan med brickor i motsatt färg.
-		//*/
+	
+		//rutan vi kikar på just nu
 		GameCoordinates currCoords = coords;
+
+		//låt oss gå i riktningen
 		while (true) {
 			//gå ett steg i riktningen
 			currCoords = { currCoords.y + GameCoordinates::translations[i][0],
@@ -349,10 +374,22 @@ bool endGame(Board& board, GameSettings& settings) {
 }
 
 int evaluatePosition(Board& board){
-	return board.numberOfDiscs[0];
+	static const GameCoordinates corners[] = {
+		{0,0},{0,7},{7,0},{7,7}
+	};
+	int pointsInBlackFavor = board.numberOfDiscs[0];
+	pointsInBlackFavor = 0;
+	for (int i = 0; i < 4; ++i) {
+		char cornerStatus = board.discs[corners[i].y][corners[i].x];
+		if (cornerStatus == 'b') pointsInBlackFavor += 200;
+		else if (cornerStatus == 'c') pointsInBlackFavor -= 200;
+	}
+
+	render::updateDebugText(std::to_string(pointsInBlackFavor));
+	return pointsInBlackFavor;
 }
 
-int minMax(Board& board,int depth){
+int minMax(Board& board,int depth, int blackMaxMin, int whiteMaxMin){
 	if (depth == 0) {
 		return evaluatePosition(board);
 	}
@@ -363,10 +400,10 @@ int minMax(Board& board,int depth){
 		for (int i = 0; i < possibleMoves.size(); ++i) {
 			Board newBoard = board;
 			placeDisc(newBoard, possibleMoves[i]);
-			int eval = minMax(newBoard, depth-1);
-			if (eval > highestEval) {
-				highestEval = eval;
-			}
+			int eval = minMax(newBoard, depth-1, blackMaxMin, whiteMaxMin);
+			highestEval = std::max(eval, highestEval);
+			blackMaxMin = std::max(eval, blackMaxMin);
+			if (whiteMaxMin <= blackMaxMin) break;
 		}
 		return highestEval;
 	}
@@ -375,10 +412,10 @@ int minMax(Board& board,int depth){
 		for (int i = 0; i < possibleMoves.size(); ++i) {
 			Board newBoard = board;
 			placeDisc(newBoard, possibleMoves[i]);
-			int eval = minMax(newBoard, depth-1);
-			if (eval < lowestEval) {
-				lowestEval = eval;
-			}
+			int eval = minMax(newBoard, depth-1, blackMaxMin, whiteMaxMin);
+			lowestEval = std::min(eval, lowestEval);
+			whiteMaxMin = std::min(eval, whiteMaxMin);
+			if (whiteMaxMin <= blackMaxMin) break;
 		}
 		return lowestEval;
 	}
@@ -386,6 +423,9 @@ int minMax(Board& board,int depth){
 
 //[8]
 GameCoordinates chooseComputerMove(Board& board, int computerDifficulty, std::vector<GameCoordinates> possibleMoves) {
+	ComputerProgress progress;
+	progress.checkedMoves = 0;
+	render::updateComputerProgress(progress);
 	int searchDepth = computerDifficulty, bestIndex = -1;
 
 	if (board.isBlacksTurn) {
@@ -393,8 +433,9 @@ GameCoordinates chooseComputerMove(Board& board, int computerDifficulty, std::ve
 		for (int i = 0; i < possibleMoves.size(); ++i) {
 			Board newBoard = board;
 			placeDisc(newBoard, possibleMoves[i]);
-			int eval = minMax(newBoard, searchDepth);
-			if (eval >= highestEval) {
+			int eval = minMax(newBoard, searchDepth, -INT_MAX, INT_MAX);
+			if (eval == highestEval) bestIndex = rand() % 2 ? i : bestIndex; 
+			else if (eval > highestEval) {
 				highestEval = eval;
 				bestIndex = i;
 			}
@@ -405,14 +446,17 @@ GameCoordinates chooseComputerMove(Board& board, int computerDifficulty, std::ve
 		for (int i = 0; i < possibleMoves.size(); ++i) {
 			Board newBoard = board;
 			placeDisc(newBoard, possibleMoves[i]);
-			int eval = minMax(newBoard, searchDepth);
-			if (eval <= lowestEval) {
+			int eval = minMax(newBoard, searchDepth, -INT_MAX, INT_MAX);
+			if (eval == lowestEval) bestIndex = rand() % 2 ? i : bestIndex;
+			if (eval < lowestEval) {
 				lowestEval = eval;
 				bestIndex = i;
 			}
 		}
 	}
 
+	progress.checkedMoves = 1;
+	render::updateComputerProgress(progress);
 	return possibleMoves[bestIndex];
 }
 
@@ -430,7 +474,7 @@ bool makePlayerMove(Board& board, GameSettings settings) {
 
 	GameCoordinates move = getValidPlayerInput(board);
 	placeDisc(board, move);
-	render::updateDebugText(std::to_string(move.y) + " " + std::to_string(move.x));
+	//render::updateDebugText(std::to_string(move.y) + " " + std::to_string(move.x));
 	render::updateBoard(false);
 	render::updateLastMove(move);
 	return true;

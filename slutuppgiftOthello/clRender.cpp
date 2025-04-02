@@ -80,7 +80,7 @@ static void print() {
 
 	std::chrono::time_point<std::chrono::system_clock> tLastFrameUpdate = lastFrameUpdate;
 	lastFrameUpdate = std::chrono::system_clock::now();
-	updateDebugText(std::to_string(std::chrono::duration_cast<std::chrono::milliseconds>(lastFrameUpdate - tLastFrameUpdate).count()), false);
+	//updateDebugText(std::to_string(std::chrono::duration_cast<std::chrono::milliseconds>(lastFrameUpdate - tLastFrameUpdate).count()), false);
 }
 
 static std::string interpolateColor(std::string startColorAnsi, std::string endColorAnsi, float pointBetween) {
@@ -297,6 +297,10 @@ void render::updateDebugText(std::string text, bool updateScreen)
 
 void render::updateComputerProgress(ComputerProgress progress)
 {
+	using namespace std::chrono;
+	static time_point<system_clock> start;
+	if (progress.checkedMoves == 0) start = system_clock::now();
+	if (progress.checkedMoves == 1) secondaryDisplayState[11] = std::to_string(duration_cast<milliseconds>(system_clock::now()-start).count()) + " ms";
 	updateScreenAndAnimations();
 }
 
@@ -308,7 +312,7 @@ void render::splashText(std::string text, int durationMs, bool returnWhenFinishe
 	splashTextStr = text;
 	if (splashTextStr.length() < 16) splashLeftMargin = (16 - splashTextStr.length()) / 2;
 	else splashLeftMargin = 0;
-	splashExpiryTime = std::chrono::system_clock::now() + std::chrono::milliseconds(durationMs);
+	splashExpiryTime = system_clock::now() + milliseconds(durationMs);
 	updateScreenAndAnimations();
 
 	if (returnWhenFinished) {
