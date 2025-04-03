@@ -142,21 +142,30 @@ void placeDisc(Board& board, GameCoordinates coords) {
 			//eller på en tom ruta
 			if (board.discs[currCoords.y][currCoords.x] == 'a') break;
 
-			//hittar vi däremot en bricka med samma färg kan vi flippa (förutsatt att det finns något att flippa)
+			//hittar vi däremot en bricka med samma färg kan vi vända (förutsatt att det finns något att vända)
+			//notera att en svart bricka bredvid en svart bricka kommer förbi första if:n men
+			//inte den andra.
 			if (board.discs[currCoords.y][currCoords.x] == sameColor) {
 				if (!squaresToBeFlipped.empty()) flipConfirmed = true;
 				break;
 			}
 
-			//om det är motsatt färg lägger vi till
+			//om det är motsatt färg lägger vi till rutan i rutor som kanske ska vändas
 			squaresToBeFlipped.push_back(currCoords);
 		}
-		//om vi har bekräftat vändningen flippar vi rutorna 
+
+		//om en vändning ska ske, flippar vi rutorna i den riktningen
 		if (flipConfirmed) {
+			//iterera alla rutor som ska vändas i riktningen
 			for (GameCoordinates square : squaresToBeFlipped) {
+				//ändra status på ruta
 				board.discs[square.y][square.x] = sameColor;
-				board.numberOfDiscs[board.isBlacksTurn ? 0 : 1]++;
-				board.numberOfDiscs[board.isBlacksTurn ? 1 : 0]--;
+
+				//*här skulle man kunna lägga till animation av vändning*
+
+				//ändra poäng, alltså hur många brickor i varje färg
+				board.numberOfDiscs[board.isBlacksTurn ? 0 : 1]++; //ändra i samma färg
+				board.numberOfDiscs[board.isBlacksTurn ? 1 : 0]--; //ändra i motsatt
 			}
 		}
 
@@ -378,11 +387,10 @@ int evaluatePosition(Board& board){
 		{0,0},{0,7},{7,0},{7,7}
 	};
 	int pointsInBlackFavor = board.numberOfDiscs[0];
-	pointsInBlackFavor = 0;
 	for (int i = 0; i < 4; ++i) {
 		char cornerStatus = board.discs[corners[i].y][corners[i].x];
-		if (cornerStatus == 'b') pointsInBlackFavor += 200;
-		else if (cornerStatus == 'c') pointsInBlackFavor -= 200;
+		if (cornerStatus == 'b') pointsInBlackFavor += 2;
+		else if (cornerStatus == 'c') pointsInBlackFavor -= 2;
 	}
 
 	render::updateDebugText(std::to_string(pointsInBlackFavor));
