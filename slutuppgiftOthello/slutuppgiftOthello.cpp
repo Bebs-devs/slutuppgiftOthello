@@ -532,6 +532,7 @@ int minMax(Board& board,int depth, int blackMaxMin, int whiteMaxMin){
 
 //[8] den här funktionen väljer ett drag ifrån möjliga drag på ett bräde, med en viss svårighetsgrad
 GameCoordinates chooseComputerMove(Board& board, int computerDifficulty, std::vector<GameCoordinates> possibleMoves) {
+	
 	ComputerProgress progress; //en struct som håller meta-information om
 	//datorns framsteg i trädet. Används enbart för debug / rendering
 	progress.checkedMoves = 0; //säger att vi precis har börjat leta efter drag
@@ -554,7 +555,13 @@ GameCoordinates chooseComputerMove(Board& board, int computerDifficulty, std::ve
 			//om vi hittat ett nytt drag som är lika bra som det bästa draget
 			//ändrar vi till det nya draget i 50% av fallen
 			//vi ändrar då bestIndex variablen, men inte highestEval, eftersom den är samma.
-			if (eval == highestEval) bestIndex = rand() % 2 ? i : bestIndex; 
+			if (eval == highestEval) { 
+				if (bestIndex >= 0)
+					bestIndex = rand() % 2 ? i : bestIndex;
+				else //vi kan bara slumpa ett drag om vi har hittat ett bra drag förut, är bestIndex == -1 har vi inte hittat ett drag än
+					bestIndex = i;
+			}
+
 			
 			//om draget är bättre
 			else if (eval > highestEval) { 
@@ -570,7 +577,12 @@ GameCoordinates chooseComputerMove(Board& board, int computerDifficulty, std::ve
 			Board newBoard = board;
 			placeDisc(newBoard, possibleMoves[i]);
 			int eval = minMax(newBoard, searchDepth, -INT_MAX, INT_MAX);
-			if (eval == lowestEval) bestIndex = rand() % 2 ? i : bestIndex;
+			if (eval == lowestEval) {
+				if (bestIndex >= 0)
+					bestIndex = rand() % 2 ? i : bestIndex;
+				else //vi kan bara slumpa ett drag om vi har hittat ett bra drag förut, är bestIndex == -1 har vi inte hittat ett drag än
+					bestIndex = i;
+			}
 			if (eval < lowestEval) { //mindre än istället för mer än
 				lowestEval = eval;
 				bestIndex = i;
@@ -580,6 +592,9 @@ GameCoordinates chooseComputerMove(Board& board, int computerDifficulty, std::ve
 
 	progress.checkedMoves = 1; //signalerar att vi är klara med att hitta ett drag
 	render::updateComputerProgress(progress); //visar tiden som det tog att välja draget
+	if (bestIndex < 0 || bestIndex >= possibleMoves.size()) {
+		std::cout << "\a";
+	}
 	return possibleMoves[bestIndex]; //returnerar draget datorn har valt
 }
 
