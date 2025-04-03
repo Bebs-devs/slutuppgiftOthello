@@ -252,104 +252,157 @@ void displayBoard(Board& board, GameSettings& settings, std::vector<GameCoordina
 	std::cout << "\n    \033[F";
 }
 
-//[5] låter användaren välja en ruta med piltangenter eller WASD och enter
+//[5] låter användaren markera en ruta med piltangenter eller WASD och välja med enter/space
 GameCoordinates getValidPlayerInput(Board & board) {
-	bool submit = false;
-	GameCoordinates selection = { 4,4 };
-	GameCoordinates attemptedSelection = selection;
-	render::updateSelectedSquare(selection);
+	bool submit = false; //håller koll på om användaren valt en ruta
 
-	while (true) {
+	GameCoordinates selection = { 4,4 }; //markerade koordinaten (börjar alltid i mitten (ungefär))
+
+	GameCoordinates attemptedSelection = selection; //en temporär variabel utifall spelaren försöker gå utanför spelplanen
+	
+	render::updateSelectedSquare(selection); //visa markerad ruta på skärmen
+
+	//input-loopen
+	while (true) { 
+		//vi använder kbhit så inte programmet pausas i väntan på input, detta
+		//så att animationer kan uppdateras sålänge
 		if (_kbhit()) {
+			//om tangenbordet har tryckts in kollar vi vilken tangent som tryckts in
 			int keycode = _getch();
-			if (keycode == 224) keycode = _getch(); //vid piltangenttryckning skapas två koder, först 224 sedan koden 
 
+			//vid piltangenttryckning skapas två koder, först 224 sedan koden 
+			if (keycode == 224) keycode = _getch();
+
+			//switcha koden, alltså kolla vilken tangent
 			switch (keycode)
 			{
 			case 72:  //upppil (eller H)
+				//koden för upppil är 224 + 72, koden för H är 72, därav funkar både här
+				//eftersom upppil och w gör samma sak kan man stacka cases på varandra
 			case 119: //w
-				attemptedSelection.y--;
+				attemptedSelection.y--; //flytta markerad ruta upp ett steg
 				break;
 			case 80:  //nedpil (eller P)
 			case 115: //s
-				attemptedSelection.y++;
+				attemptedSelection.y++; //flytta markerad ruta ned ett steg
 				break;
 			case 75: //vänsterpil (eller K)
 			case 97: //a
-				attemptedSelection.x--;
+				attemptedSelection.x--; //flytta markerad ruta vänster ett steg
 				break;
 			case 77: //högerpil (eller M)
 			case 100: //d
-				attemptedSelection.x++;
+				attemptedSelection.x++; //flytta markerad ruta höger ett steg
 				break;
 			case 13: //enter
 			case 32: //space
-				submit = true;
+				submit = true; //vi sparar att användaren vill välja ruta
 				break;
 			case 114: //r
-				render::restoreScreen();
+				render::restoreScreen(); //ett specialfall, som är till för att
+				//rensa skärmen och rita upp den igen. Används om man ändrar fönstret.
 				break;
 			default:
 				break;
 			}
 
+			//kollar om markering är innanför spelplanen
+			//är den utanför sätter vi bara attempetedSelection till senaste selectionen som lyckades
 			if (attemptedSelection.isInValid()) attemptedSelection = selection;
+			//är den innanför sätter vi den senaste selectionen till markeringen
 			else selection = attemptedSelection;
 
+			//om användaren valt ruta OCH det är ett giltigt draag
 			if (submit && isValidMove(board, selection)) {
+				//koordinaten {-1, -1} är utanför spelplanen, därför kommer ingen markerad
+				//ruta längre synas på skärmen.
 				render::updateSelectedSquare({ -1,-1 });
+
+				//returna den slutgiltiga koordinaten för rutan användaren valde
 				return selection;
 			}
+			//om det inte var ett giltigt drag nullifierar vi helt enkelt
+			//submit-variabeln och loopen fortsätter
 			else submit = false;
 
-
+			//visa markerad ruta
 			render::updateSelectedSquare(selection);
 		}
+
+		//om ingen input har skett vill vi ändå uppdatera animationerna
+		//finns det animationer att uppdatera, tas dem av hand i följande funktion
 		render::updateScreenAndAnimations();
 	}
 }
 
-//[6.1]
+//[6.1] skapar en enkel flervalsmeny styrd av piltangenter och enter/space, returnerar index av valt val. 
 int simpleSelectionChoice(std::string header, std::vector<std::string> options) {
-	int keyPress;
-	int selection = 0;
-	std::cout << "\033[2J";
-	while (true) {
-		std::cout << "\033[H" << header << '\n';
-		for (int i = 0; i < options.size(); ++i) {
-			if (i == selection)
-				std::cout << "> " << options[i] << " <         \n";
-			else std::cout << "  " << options[i] << "           \n";
-		}
-		keyPress = _getch();
-		//om enter eller space
-		if (keyPress == 13 || keyPress == 32) break;
-		if (keyPress != 224) continue;
+	//header är titeln, eller informationen för menyn
+	//options är listan över alternativ
 
-		keyPress = _getch();
-		if (keyPress == 80) { //ned-pil
-			selection += selection < options.size() - 1 ? 1 : 0;
+	int keyPress; //koden för tangentnedtryckning
+	int selection = 0; //index för valt alternativ
+
+	std::cout << "\033[2J"; //rensar skärmen
+
+	while (true) {
+		//hoppar till högst upp på skärmen och skriver ut titeln
+		std::cout << "\033[H" << header << '\n';
+
+		//iterera genom alla alternativ i syfte att skriva ut dem
+		for (int i = 0; i < options.size(); ++i) {
+			if (i == selection) //om markerat
+				std::cout << "> " << options[i] << " <              \n";
+			//om inte markerat
+			else std::cout << "  " << options[i] << "               \n";
+			//vi skriver ut extra mycket mellanrum i slutet, eftersom
+			//skärmen inte rensas utan bara skrivs över
+			//*man skulle kunna kolla vilket alternativ som har längst text
+			//för att anpassa marginalen*
+		}
+
+		keyPress = _getch(); //få input
+
+		//om enter eller space
+		if (keyPress == 13 || keyPress == 32) break; //hoppa ur loopen då ett val har gjorts
+
+		if (keyPress != 224) continue; //om inte piltangent
+		//piltangenter genererar alltid två koder: 224 + X
+
+		keyPress = _getch(); //få koden för piltangenten (X alltså)
+
+		if (keyPress == 80) { // om ned-pil
+			//flytta markering ned, om vi inte redan är på sista alternativet
+			selection += (selection < options.size() - 1 ? 1 : 0);
 		}
 		else if (keyPress == 72) { //upp-pil
-			selection -= selection > 0 ? 1 : 0;
+			//flytta markering upp, om vi inte redan är på första alternativet
+			selection -= (selection > 0 ? 1 : 0);
 		}
 		
 	}
+	//efter att vi har hoppat ur loppen på Enter/Space, returnerar vi indexet var valt alternativ
 	return selection;
 }
 
-//[6]
+//[6] läs in inställningar från användaren
 void initGameSettings(GameSettings& settings) {
-	const std::vector<std::string> optionsPlayer1 = { "Svart ska spelas av människa", "Svart ska spelas av dator" };
-	const std::vector<std::string> optionsPlayer2 = { "Vit ska spelas av människa", "Vit ska spelas av dator" };
-	const std::vector<std::string> optionsDifficulty = { "0 - Slumpade drag", "1 - Enkel", "2 - Medel", "3 - Svår", "4 - Omöjlig", "5", "6", "7"};
+	const std::vector<std::string> optionsPlayer1 = { "Svart ska spelas av människa", "Svart ska spelas av dator" }; //alternativ för spelare 1 / Svart
+	const std::vector<std::string> optionsPlayer2 = { "Vit ska spelas av människa", "Vit ska spelas av dator" }; //alternativ för spelare 2 / Vit
+	//alternativ för ai-svårighetsgrad. 
+	const std::vector<std::string> optionsDifficulty = { "0 - Slumpat", "1 - Buslätt", "2 - Enkel", "3 - Medel", "4 - Svår", "5 - Läskig", "6 - Supersvår", "7 - Ett drag på timme"}; 
 
+	//läs in val för huruvida svart är AI eller människa
+	//returnering blir 0 eller 1, vilket omvandlas till false/true genom att casta till bool
 	settings.player1iscomp = (bool)simpleSelectionChoice("\n Välkommen till Othello\nSvart börjar spelet. Välj alternativ för svart:\n",optionsPlayer1);
 	
+	//om svart är AI
 	if (settings.player1iscomp) {
-		
+		//läs in svårighetsgrad för AI
 		settings.comp1Difficulty = simpleSelectionChoice("\n Välommen till Othello\nSvart spelas av en dator, vilken svårighetsgrad?\n", optionsDifficulty);
 	}
+
+	//läs in val för vit på samma sätt
 
 	settings.player2iscomp = (bool)simpleSelectionChoice("\n Välkommen till Othello\nVit fortsätter spelet. Välj alternativ för vit:\n", optionsPlayer2);
 
@@ -359,97 +412,158 @@ void initGameSettings(GameSettings& settings) {
 	}
 }
 
-//[7]
-bool endGame(Board& board, GameSettings& settings) {
+//[7] när spelet är slut anropas denna funktion, som då visar hur vem som vann och ställning
+void endGame(Board& board, GameSettings& settings) {
+	//håller koll på statistik under hela programmets körtid
+	//*här skulle man kunna lägga till filhantering för att lagra ex. Highscore*
 	static int blackWins = 0, whiteWins = 0, ties = 0;
+
 	std::cout << "SPELET ÄR ÖVER\n";
+	//om lika
 	if (board.numberOfDiscs[0] == board.numberOfDiscs[1]) {
 		std::cout << "Se där, det blev lika!\n";
 		++ties;
 	}
+	//om svart vann
 	else if (board.numberOfDiscs[0] > board.numberOfDiscs[1]) {
 		std::cout << "Grattis"<< (settings.player1iscomp ? " datorn" : " spelare") << ", SVART vann\n";
 		++blackWins;
-	}
+	} 
+	//om vit vann
 	else {
 		std::cout << "Grattis" << (settings.player2iscomp ? " datorn" : " spelare") << ", VIT vann\n";
 		++whiteWins;
 	}
-	std::cout << "Resultat: \n";
-	std::cout << "Svart: " << board.numberOfDiscs[0] << " brickor\n";
-	std::cout << "Vit  : " << board.numberOfDiscs[1] << " brickor\n";
-	std::cout << "Ställning under programmet körtid:\n";
+
+	//skriv ut ställningen
+	std::cout << "\nStällning under programmet körtid:\n";
 	std::cout << "Svart " << blackWins << " - " << whiteWins << " Vit\n";
-	return false;
 }
 
+//funktion som används av AIn för att kolla på hur bra ett position är
+//returnerar högt värde om det går bra för svart
+//returnerar lågt värde om det går bra för vit
 int evaluatePosition(Board& board){
+	//koordinater för hörnen
 	static const GameCoordinates corners[] = {
 		{0,0},{0,7},{7,0},{7,7}
 	};
+	//utgångspunkten är hur många brickor svart har
+	//egentligen räcker det med bara det
 	int pointsInBlackFavor = board.numberOfDiscs[0];
-	/*for (int i = 0; i < 4; ++i) {
+
+	//iterera genom alla hör
+	for (int i = 0; i < 4; ++i) {
+		//spara status i det hörnet
 		char cornerStatus = board.discs[corners[i].y][corners[i].x];
+
+		//ge två poäng till svart om hörnet tillhör svart
 		if (cornerStatus == 'b') pointsInBlackFavor += 2;
+		//subtrahera två poäng från svart om hörnet tillhör vit
 		else if (cornerStatus == 'c') pointsInBlackFavor -= 2;
 	}
+	//detta incentiveserar att få hörn, vilket kanske känns mer mänskligt
+	//dock gör detta ingen större skillnad.
 
-	render::updateDebugText(std::to_string(pointsInBlackFavor));*/
+	//returnera poäng i svarts favör
 	return pointsInBlackFavor;
 }
 
+//rekursiv algorithm för att söka igenom ett träd av möjliga drag
 int minMax(Board& board,int depth, int blackMaxMin, int whiteMaxMin){
-	if (depth == 0) {
+	//notera att board inte är brädet som visas på skärmen
+	//utan ett hypotetiskt bräde med framtida positioner
+	
+	//blackMaxMin och whiteMaxMin, är enbart till för optimisering
+	//genom vad som kallas "pruning"
+	//det är genom att hålla koll på vad svart och vit är garanterade att få
+	//som man kan klippa bort grenar eftersom de inte pågår resultatet
+
+	if (depth == 0) { //utgångvillkoret för funktionen
+		//returnerar den statiska utvärderingen av positionen
 		return evaluatePosition(board);
 	}
+
+	//lista över möjliga drag
 	std::vector<GameCoordinates> possibleMoves = getListOfPossibleMoves(board);
 
+	//om det är svarts tur vill vi ha en så hög utvärdering som möjligt
 	if (board.isBlacksTurn) {
-		int highestEval = -INT_MAX;
+		int highestEval = -INT_MAX; //vi börjar därför på en oändligt låg utvärdering
+		
+		//iterera alla möjliga drag
 		for (int i = 0; i < possibleMoves.size(); ++i) {
-			Board newBoard = board;
+			Board newBoard = board; //skapa ett nytt bräde som är en kopia av det vi har
+			//utför draget vi är på på detta nya bräde
 			placeDisc(newBoard, possibleMoves[i]);
+			//skicka vidare detta ett steg ner i minMax-trädet
+			//depth-1 är så vi till slut kommer till slutet, då depth == 0
 			int eval = minMax(newBoard, depth-1, blackMaxMin, whiteMaxMin);
+			//vi vill ha den bästa utvärderingen
 			highestEval = std::max(eval, highestEval);
+			//blackMaxMin är vad svart är garanterad att få
 			blackMaxMin = std::max(eval, blackMaxMin);
+			//om det lägsta vit är garanterad är lägre eller lika med
+			//det högsta svart är garanterad att få finns det ingen
+			//mening att fortstta gå i trädet, därför breaker vi (klipp grenen)
+			//och minmax fortsätter i de andra grenarna
 			if (whiteMaxMin <= blackMaxMin) break;
 		}
+		//returnera utvärderingen för bästa draget vi hittade för svart
 		return highestEval;
 	}
+	//om det är vits tur vill vi ha en så låg utvärdering som möjligt
 	else {
-		int lowestEval = INT_MAX;
-		for (int i = 0; i < possibleMoves.size(); ++i) {
-			Board newBoard = board;
-			placeDisc(newBoard, possibleMoves[i]);
+		int lowestEval = INT_MAX; //vi börjar med en oändlig hög utvärdering (alltså jättedåligt)
+		for (int i = 0; i < possibleMoves.size(); ++i) { //iterera drag
+			Board newBoard = board; //temp bräde
+			placeDisc(newBoard, possibleMoves[i]); //placera en disk på detta låtsas-bräde
 			int eval = minMax(newBoard, depth-1, blackMaxMin, whiteMaxMin);
-			lowestEval = std::min(eval, lowestEval);
+			lowestEval = std::min(eval, lowestEval); //nu vill vi istället ha den lägsta
+			//utvärderingen
 			whiteMaxMin = std::min(eval, whiteMaxMin);
+			//samma sak som för svarts tur. 
 			if (whiteMaxMin <= blackMaxMin) break;
 		}
+		//returnera utvärderingen för sämsta draget vi hittade för svart (vilket är bästa för vit)
 		return lowestEval;
 	}
 }
 
-//[8]
+//[8] den här funktionen väljer ett drag ifrån möjliga drag på ett bräde, med en viss svårighetsgrad
 GameCoordinates chooseComputerMove(Board& board, int computerDifficulty, std::vector<GameCoordinates> possibleMoves) {
-	ComputerProgress progress;
-	progress.checkedMoves = 0;
-	render::updateComputerProgress(progress);
+	ComputerProgress progress; //en struct som håller meta-information om
+	//datorns framsteg i trädet. Används enbart för debug / rendering
+	progress.checkedMoves = 0; //säger att vi precis har börjat leta efter drag
+	render::updateComputerProgress(progress); //säger till render-motorn detta
+
+	//svårighetsgraden är djupet på söket, som skickas till minmax-algoritmen
+	//bestIndex är indexet till det drag i possibleMoves som är bäst
 	int searchDepth = computerDifficulty, bestIndex = -1;
 
+	//här liknar koden minmax mycket, men med vissa ändringar
+	//för förklaring av koden, se minmax
+	//för svart
 	if (board.isBlacksTurn) {
 		int highestEval = -INT_MAX;
 		for (int i = 0; i < possibleMoves.size(); ++i) {
 			Board newBoard = board;
 			placeDisc(newBoard, possibleMoves[i]);
+			//initiellt är blackMaxMin och whiteMaxMin lika med det sämsta, respektive bästa för svart
 			int eval = minMax(newBoard, searchDepth, -INT_MAX, INT_MAX);
+			//om vi hittat ett nytt drag som är lika bra som det bästa draget
+			//ändrar vi till det nya draget i 50% av fallen
+			//vi ändrar då bestIndex variablen, men inte highestEval, eftersom den är samma.
 			if (eval == highestEval) bestIndex = rand() % 2 ? i : bestIndex; 
-			else if (eval > highestEval) {
-				highestEval = eval;
-				bestIndex = i;
+			
+			//om draget är bättre
+			else if (eval > highestEval) { 
+				highestEval = eval; //ändra värdet på bästa drag hittils
+				bestIndex = i; //spara indexet så vi har något att returnera
 			}
 		}
 	}
+	//för vit, i princip samma fast min istället för max
 	else {
 		int lowestEval = INT_MAX;
 		for (int i = 0; i < possibleMoves.size(); ++i) {
