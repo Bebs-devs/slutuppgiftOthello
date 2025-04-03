@@ -238,10 +238,10 @@ void displayBoard(Board& board, GameSettings& settings, std::vector<GameCoordina
 		std::cout << "\033[0m";
 		//spelare 1 (svart) - antal brickor och spelartyp
 		if (rowNumber == 0) std::cout << "  " << board.numberOfDiscs[0]
-			<< " - Svart" << (settings.player1iscomp ? " (AI)" : "");
+			<< " - Svart" << (settings.player1isComp ? " (AI)" : "");
 		//spelare 2 (vit)
 		else if (rowNumber == 1) std::cout << "  " << board.numberOfDiscs[1]
-			<< " - Vit" << (settings.player2iscomp ? " (AI)" : "");
+			<< " - Vit" << (settings.player2isComp ? " (AI)" : "");
 		//vems tur det är
 		else if (rowNumber == 3) std::cout <<
 			(board.isBlacksTurn ? "  *Svarts tur*" : " *Vits tur*");
@@ -394,19 +394,19 @@ void initGameSettings(GameSettings& settings) {
 
 	//läs in val för huruvida svart är AI eller människa
 	//returnering blir 0 eller 1, vilket omvandlas till false/true genom att casta till bool
-	settings.player1iscomp = (bool)simpleSelectionChoice("\n Välkommen till Othello\nSvart börjar spelet. Välj alternativ för svart:\n",optionsPlayer1);
+	settings.player1isComp = (bool)simpleSelectionChoice("\n Välkommen till Othello\nSvart börjar spelet. Välj alternativ för svart:\n",optionsPlayer1);
 	
 	//om svart är AI
-	if (settings.player1iscomp) {
+	if (settings.player1isComp) {
 		//läs in svårighetsgrad för AI
 		settings.comp1Difficulty = simpleSelectionChoice("\n Välommen till Othello\nSvart spelas av en dator, vilken svårighetsgrad?\n", optionsDifficulty);
 	}
 
 	//läs in val för vit på samma sätt
 
-	settings.player2iscomp = (bool)simpleSelectionChoice("\n Välkommen till Othello\nVit fortsätter spelet. Välj alternativ för vit:\n", optionsPlayer2);
+	settings.player2isComp = (bool)simpleSelectionChoice("\n Välkommen till Othello\nVit fortsätter spelet. Välj alternativ för vit:\n", optionsPlayer2);
 
-	if (settings.player2iscomp) {
+	if (settings.player2isComp) {
 
 		settings.comp2Difficulty = simpleSelectionChoice("\n Välkommen till Othello\nVit spelas av en dator, vilken svårighetsgrad?\n", optionsDifficulty);
 	}
@@ -426,12 +426,12 @@ void endGame(Board& board, GameSettings& settings) {
 	}
 	//om svart vann
 	else if (board.numberOfDiscs[0] > board.numberOfDiscs[1]) {
-		std::cout << "Grattis"<< (settings.player1iscomp ? " datorn" : " spelare") << ", SVART vann\n";
+		std::cout << "Grattis"<< (settings.player1isComp ? " datorn" : " spelare") << ", SVART vann\n";
 		++blackWins;
 	} 
 	//om vit vann
 	else {
-		std::cout << "Grattis" << (settings.player2iscomp ? " datorn" : " spelare") << ", VIT vann\n";
+		std::cout << "Grattis" << (settings.player2isComp ? " datorn" : " spelare") << ", VIT vann\n";
 		++whiteWins;
 	}
 
@@ -571,80 +571,121 @@ GameCoordinates chooseComputerMove(Board& board, int computerDifficulty, std::ve
 			placeDisc(newBoard, possibleMoves[i]);
 			int eval = minMax(newBoard, searchDepth, -INT_MAX, INT_MAX);
 			if (eval == lowestEval) bestIndex = rand() % 2 ? i : bestIndex;
-			if (eval < lowestEval) {
+			if (eval < lowestEval) { //mindre än istället för mer än
 				lowestEval = eval;
 				bestIndex = i;
 			}
 		}
 	}
 
-	progress.checkedMoves = 1;
-	render::updateComputerProgress(progress);
-	return possibleMoves[bestIndex];
+	progress.checkedMoves = 1; //signalerar att vi är klara med att hitta ett drag
+	render::updateComputerProgress(progress); //visar tiden som det tog att välja draget
+	return possibleMoves[bestIndex]; //returnerar draget datorn har valt
 }
 
-//[9]
+//[9] läser in input från användaren och placerar brickan. Returnerar huruvida ett drag gjordes.
 bool makePlayerMove(Board& board, GameSettings settings) {
+	//möjliga drag
 	std::vector<GameCoordinates> possibleMoves = getListOfPossibleMoves(board);
-	render::updatePossibleMoves(possibleMoves);
+	render::updatePossibleMoves(possibleMoves); //visar möjliga drag för spelaren på skärmen
 
+	//om spelaren inte kan göra ett drag
 	if (possibleMoves.empty()) {
-
+		//det blir nästa spelares tur
 		board.isBlacksTurn = board.isBlacksTurn ? false : true;
+
+		//vi visar ett meddelande på skärmen 
+		//eftersom argumentet returnWhenFinished är satt till true, kommer
+		//exekveringen av resten av koden vänta tills meddelandet har försvunnit, om 1500 ms.
 		render::splashText("Spelare har inga möjliga drag", 1500, true);
+
+		//returnerar false, eftersom inget drag gjordes
 		return false;
 	}
 
+	//läs in ett drag från spelaren
 	GameCoordinates move = getValidPlayerInput(board);
+	
+	//placera brickan
 	placeDisc(board, move);
-	//render::updateDebugText(std::to_string(move.y) + " " + std::to_string(move.x));
-	render::updateBoard(false);
-	render::updateLastMove(move);
+
+	render::updateBoard(false); //uppdatera brädet utan att uppdatera skärmen
+	render::updateLastMove(move); //uppdatera senaste draget, samt uppdatera skärmen
+
+	//returnera true då ett drag gjordes
 	return true;
 }
 
+
+//motsvarande funktion till makePlayerMove, fast för datorn.
+//returnerar huruvida ett drag gjordes
 bool makeComputerMove(Board& board, GameSettings settings, int difficulty = 0) {
+	//lista över möjliga drag
 	std::vector<GameCoordinates> possibleMoves = getListOfPossibleMoves(board);
 	
+	//om det inte finns några möjliga drag
 	if (possibleMoves.empty()) {
+		//nästa spelares tur
 		board.isBlacksTurn = board.isBlacksTurn ? false : true;
-		render::splashText("Ai har inga möjliga drag", 1500, true);
-		return false;
+
+		//visa meddelande. Exekvering pausas i 1500 ms.
+		render::splashText("AI har inga möjliga drag", 1500, true);
+
+		return false; //returnera false, då inget drag gjordes
 	}
 	
+	//välj ett drag
 	GameCoordinates chosenMove = chooseComputerMove(board, difficulty, possibleMoves);
-	placeDisc(board, chosenMove);
-	render::updateBoard(false);
-	render::updateLastMove(chosenMove);
-	return true;
+	placeDisc(board, chosenMove); //placera brickan på spelbrädet
+	render::updateBoard(false); //uppdatera brädet utan att uppdatera skärmen
+	render::updateLastMove(chosenMove); //uppdatera senaste drag samt uppdatera skärmen
+	return true; //returnera true, då ett drag gjordes
 }
 
-
+//huvudfunktionen, som körs under hela programmets gång
 int main() {
-	srand((int)time(0));
-	setlocale(LC_ALL, "sv_SE");
-	Board gameBoard;
-	GameSettings settings;
-	render::init();
-	render::setBoard(&gameBoard);
-	render::setSettings(&settings);
+	srand((int)time(0)); //ge ett frö åt slumpgeneratorn
+	setlocale(LC_ALL, "sv_SE"); //ändra lokalitetsinställningar så att åäö kan visas korrekt
+
+	Board gameBoard; //en instans av Board som håller det aktiva spelbrädet
+	GameSettings settings; //en instans av GameSettings som håller de aktiva spelarinställningarna
+
+	render::init(); //initialisera render-motorn
+	render::setBoard(&gameBoard); //ge render-motorn en referens till brädet
+	render::setSettings(&settings); //ge render-motorn en referens till inställningarna
 	
-	//std::this_thread::sleep_for(std::chrono::milliseconds(10000));
+	//loopar mellan matcher
 	while (true) {
-		gameBoard = Board();
-		initGameSettings(settings);
-		system("cls");
-		render::updateBoard();
-		render::updateSettings();
+		//starta en ny match
+
+		gameBoard = Board(); //initialisera spelbrädet på nytt, dvs starta om det
+		initGameSettings(settings); //läs in inställningar från användaren
+		system("cls"); //rensa skärmen så att inga artifakter finns kvar från menyn
+
+		render::updateBoard(); //visa spelplanen
+		render::updateSettings(); //visa inställningar (alltså om spelare är AI eller inte)
+
+		//variabler som håller koll på spelarna lyckades med sina senaste drag
 		bool player1successful = true, player2successful = true;
-		while (player1successful || player2successful) {
-			player1successful = settings.player1iscomp ? makeComputerMove(gameBoard, settings, settings.comp1Difficulty) : makePlayerMove(gameBoard, settings);
-			player2successful = settings.player2iscomp ? makeComputerMove(gameBoard, settings, settings.comp2Difficulty) : makePlayerMove(gameBoard, settings);
+
+		//medans någon av spelarna kunde göra ett drag senast
+		while (player1successful || player2successful) { 
+			//gör först ett drag åt spelare 1 (svart), sedan spelare 2 (vit).
+			//vi använder inställninsvariablen för att välja vilken funktion som ska anropas
+			player1successful = settings.player1isComp ? makeComputerMove(gameBoard, settings, settings.comp1Difficulty) : makePlayerMove(gameBoard, settings);
+			player2successful = settings.player2isComp ? makeComputerMove(gameBoard, settings, settings.comp2Difficulty) : makePlayerMove(gameBoard, settings);
 		}
+
+		//när ingen av spelarna kunde göra ett drag senast, är spelet slut
+		//vi anropar funktionen som skriver ut resultatet
 		endGame(gameBoard, settings);
+
+		//enkel input för att antingen avsluta programmet, eller köra en till match
 		std::cout << "Vill du köra igen? Klicka ENTER.\nVill du avsluta? Klicka valfri tangent\n";
 		if (_getch() != 13) break; //13 är koden för enter
 		
 	}
+
+	//returnera 0 eftersom programmet kördes framgångsrikt
 	return 0;
 }
