@@ -164,6 +164,7 @@ void placeDisc(Board& board, GameCoordinates coords) {
 				//*här skulle man kunna lägga till animation av vändning*
 
 				//ändra poäng, alltså hur många brickor i varje färg
+				//numberOfDiscs[0] är svart och [1] är vit
 				board.numberOfDiscs[board.isBlacksTurn ? 0 : 1]++; //ändra i samma färg
 				board.numberOfDiscs[board.isBlacksTurn ? 1 : 0]--; //ändra i motsatt
 			}
@@ -174,7 +175,7 @@ void placeDisc(Board& board, GameCoordinates coords) {
 	board.isBlacksTurn = board.isBlacksTurn ? false : true;
 }
 
-//[4]
+//[4] DEPRECATED den här funktionen används inte sedan den nya render-motorn, men funktionen har inte tagits bort
 void displayBoard(Board& board, GameSettings& settings, std::vector<GameCoordinates> movesOverlay = { }, GameCoordinates highlighted = {9,9}) {
 	//symboler som ska skrivas ut
 	std::string emptySymbol = "  ", 
@@ -251,7 +252,7 @@ void displayBoard(Board& board, GameSettings& settings, std::vector<GameCoordina
 	std::cout << "\n    \033[F";
 }
 
-//[5]
+//[5] låter användaren välja en ruta med piltangenter eller WASD och enter
 GameCoordinates getValidPlayerInput(Board & board) {
 	bool submit = false;
 	GameCoordinates selection = { 4,4 };
@@ -387,13 +388,13 @@ int evaluatePosition(Board& board){
 		{0,0},{0,7},{7,0},{7,7}
 	};
 	int pointsInBlackFavor = board.numberOfDiscs[0];
-	for (int i = 0; i < 4; ++i) {
+	/*for (int i = 0; i < 4; ++i) {
 		char cornerStatus = board.discs[corners[i].y][corners[i].x];
 		if (cornerStatus == 'b') pointsInBlackFavor += 2;
 		else if (cornerStatus == 'c') pointsInBlackFavor -= 2;
 	}
 
-	render::updateDebugText(std::to_string(pointsInBlackFavor));
+	render::updateDebugText(std::to_string(pointsInBlackFavor));*/
 	return pointsInBlackFavor;
 }
 
