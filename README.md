@@ -10,7 +10,7 @@ kunna köra mot en dator på olika svårighetsgrader samt testa att låta datorn
 de flesta fokuserar på spelare vs spelare i olika online-turneringar och likande. Jag ville att datorn och statistiken var mer i fokus. Dessutom tyckte jag det lät
 kul att försöka på ett effektivt sätt programmera ett flexibelt sätt att representera och skriva ut spelplanen med olika grafiska tekniker (såsom animationer och färger).
 ## Nyckelaspekter
-Programmet är uppbyggd på ett sådant sätt att den huvudsakligen utskriften sker i en annan fil, den så kallade Render-Motorn. Denna lagrar statusen på displayen och håller koll på animationer och färger. På sätt kan spellogiken hållas helt helt separat från utskriftslogiken, med undantag får några funktionsanrop. Detta gör det enkelt att bygga på med nya funktioner.
+Programmet är uppbyggd på ett sådant sätt att den huvudsakliga utskriften sker i en annan fil, den så kallade Render-Motorn. Denna lagrar statusen på displayen och håller koll på animationer och färger. På så sätt kan spellogiken hållas helt separat från utskriftslogiken, med undantag för några funktionsanrop. Detta gör det enkelt att bygga på med nya funktioner.
 ## Hur används programmet
 När programmet startas, syns startmenyn. Här väljer man alternativ för spelarna med hjälp av piltangenter och Enter. Väljer man att köra mot datorn, får man också välja svårighetsgrad.&nbsp;<br>
 ![othello-output-menu](https://github.com/user-attachments/assets/ca03b7d4-2e3c-4d33-a446-09ff9d7747d6)
